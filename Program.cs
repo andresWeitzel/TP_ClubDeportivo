@@ -1,3 +1,5 @@
+using TP_ClubDeportivo.Forms;
+
 namespace TP_ClubDeportivo;
 
 static class Program

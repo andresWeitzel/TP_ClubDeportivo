@@ -2,7 +2,7 @@ namespace TP_ClubDeportivo.Models
 {
     internal class Profesor : Persona
     {
-        public string Especialidad { get; set; }
+        public string Especialidad { get; set; } = string.Empty;
 
         public int Legajo { get; set; }
 

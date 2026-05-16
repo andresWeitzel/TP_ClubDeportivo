@@ -2,7 +2,7 @@ namespace TP_ClubDeportivo.Models
 {
     internal class Nutricionista : Persona
     {
-        public string Matricula { get; set; }
+        public string Matricula { get; set; } = string.Empty;
 
         public void AtenderTurno(TurnoNutricion turno)
         {

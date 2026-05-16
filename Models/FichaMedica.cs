@@ -2,15 +2,15 @@ namespace TP_ClubDeportivo.Models
 {
     internal class FichaMedica
     {
-        public string IdFicha { get; set; }
+        public string IdFicha { get; set; } = string.Empty;
 
-        public string Antecedentes { get; set; }
+        public string Antecedentes { get; set; } = string.Empty;
 
-        public string Alergias { get; set; }
+        public string Alergias { get; set; } = string.Empty;
 
-        public string Medicacion { get; set; }
+        public string Medicacion { get; set; } = string.Empty;
 
-        public string CargaActividadPermitida { get; set; }
+        public string CargaActividadPermitida { get; set; } = string.Empty;
 
         public void Actualizar()
         {

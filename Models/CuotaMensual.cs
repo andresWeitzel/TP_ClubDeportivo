@@ -2,7 +2,7 @@ namespace TP_ClubDeportivo.Models
 {
     internal class CuotaMensual
     {
-        public string Periodo { get; set; }
+        public string Periodo { get; set; } = string.Empty;
 
         public DateTime FechaVencimiento { get; set; }
 

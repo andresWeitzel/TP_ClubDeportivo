@@ -2,9 +2,9 @@ namespace TP_ClubDeportivo.Models
 {
     internal class Socio : Persona
     {
-        public string NumeroSocio { get; set; }
+        public string NumeroSocio { get; set; } = string.Empty;
 
-        public string EstadoCuota { get; set; }
+        public string EstadoCuota { get; set; } = string.Empty;
 
         public DateTime FechaAlta { get; set; }
 

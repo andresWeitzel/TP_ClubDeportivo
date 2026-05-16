@@ -8,7 +8,7 @@ namespace TP_ClubDeportivo.Models
 
         public TimeSpan HoraSalida { get; set; }
 
-        public string Firma { get; set; }
+        public string Firma { get; set; } = string.Empty;
 
         public void Registrar()
         {
