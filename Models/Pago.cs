@@ -10,9 +10,15 @@ namespace TP_ClubDeportivo.Models
 
         public string MedioPago { get; set; } = string.Empty;
 
+       
+
         public void Registrar()
         {
             Console.WriteLine("Pago registrado.");
+        }
+        public void EmitirComprobante()
+        {
+            Console.WriteLine("Comprobante emitido.");
         }
     }
 }

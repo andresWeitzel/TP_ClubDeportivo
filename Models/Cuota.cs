@@ -1,6 +1,6 @@
 namespace TP_ClubDeportivo.Models
 {
-    internal class CuotaMensual
+    internal class Cuota
     {
         public string Periodo { get; set; } = string.Empty;
 
@@ -8,11 +8,12 @@ namespace TP_ClubDeportivo.Models
 
         public bool EnMora { get; set; }
 
+        public string tipoCuota { get; set; } = string.Empty;
+
         public double CalcularMora()
         {
             return 0;
         }
-
         public bool EstaVencida()
         {
             return FechaVencimiento < DateTime.Now;
