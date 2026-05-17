@@ -110,6 +110,7 @@ DELIMITER $$
 
 CREATE PROCEDURE sp_actualizar_visitante(
     IN p_id_visitante INT,
+    IN p_dni VARCHAR(20),
     IN p_nombre VARCHAR(100),
     IN p_apellido VARCHAR(100),
     IN p_telefono VARCHAR(50),
@@ -119,6 +120,7 @@ CREATE PROCEDURE sp_actualizar_visitante(
 BEGIN
     UPDATE visitantes
     SET 
+        dni = p_dni,
         nombre = p_nombre,
         apellido = p_apellido,
         telefono = p_telefono,
@@ -138,17 +140,30 @@ CREATE PROCEDURE sp_eliminar_visitante(
     OUT p_mensaje VARCHAR(255)
 )
 BEGIN
-    DECLARE v_tiene_pagos INT;
-    
-    -- Validar si tiene pagos registrados
-    SELECT COUNT(*) INTO v_tiene_pagos 
-    FROM pagos WHERE visitante_id = p_id_visitante;
-    
-    IF v_tiene_pagos > 0 THEN
-        SET p_mensaje = 'No se puede eliminar. El visitante tiene pagos registrados.';
+    DECLARE v_cant_pagos INT DEFAULT 0;
+
+    SELECT COUNT(*) INTO v_cant_pagos
+    FROM pagos
+    WHERE visitante_id = p_id_visitante;
+
+    IF v_cant_pagos > 0 THEN
+        DELETE FROM pagos WHERE visitante_id = p_id_visitante;
+    END IF;
+
+    DELETE FROM visitantes WHERE id_visitante = p_id_visitante;
+
+    IF ROW_COUNT() >= 1 THEN
+        IF v_cant_pagos > 0 THEN
+            SET p_mensaje = CONCAT(
+                'Visitante eliminado correctamente (',
+                v_cant_pagos,
+                ' pago(s) diario(s) asociado(s) también fueron eliminados).'
+            );
+        ELSE
+            SET p_mensaje = 'Visitante eliminado correctamente.';
+        END IF;
     ELSE
-        DELETE FROM visitantes WHERE id_visitante = p_id_visitante;
-        SET p_mensaje = 'Visitante eliminado correctamente.';
+        SET p_mensaje = 'No se encontró el visitante indicado.';
     END IF;
 END$$
 

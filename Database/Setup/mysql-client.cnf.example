@@ -1,0 +1,14 @@
+# Copiar este archivo como "mysql-client.cnf" en la misma carpeta Setup
+# y usar init_db_con_cnf.bat si prefiere no poner la clave en el .bat
+#
+# [client]
+# user=root
+# password=
+# host=localhost
+# port=3306
+
+[client]
+user=root
+password=
+host=localhost
+port=3306

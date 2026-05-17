@@ -95,6 +95,63 @@ namespace TP_ClubDeportivo.DAO
             return lista;
         }
 
+        public bool Actualizar(Visitante visitante)
+        {
+            using var connection = _conexionFactory.ObtenerConexion();
+            connection.Open();
+
+            using var command = new MySqlCommand("sp_actualizar_visitante", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            command.Parameters.AddWithValue("@p_id_visitante", visitante.IdVisitante);
+            command.Parameters.AddWithValue("@p_dni", visitante.DNI);
+            command.Parameters.AddWithValue("@p_nombre", visitante.Nombre);
+            command.Parameters.AddWithValue("@p_apellido", visitante.Apellido);
+            command.Parameters.AddWithValue("@p_telefono", visitante.Telefono);
+            command.Parameters.AddWithValue("@p_actividad", visitante.Actividad);
+            command.Parameters.AddWithValue("@p_pago_diario_monto", visitante.PagoDiarioMonto);
+
+            try
+            {
+                return command.ExecuteNonQuery() >= 1;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool Eliminar(int visitanteId, out string mensaje)
+        {
+            mensaje = string.Empty;
+            using var connection = _conexionFactory.ObtenerConexion();
+            connection.Open();
+
+            using var command = new MySqlCommand("sp_eliminar_visitante", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            command.Parameters.AddWithValue("@p_id_visitante", visitanteId);
+
+            var outputParam = new MySqlParameter("@p_mensaje", MySqlDbType.String, 255)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(outputParam);
+
+            try
+            {
+                command.ExecuteNonQuery();
+                mensaje = outputParam.Value?.ToString() ?? string.Empty;
+                return mensaje.Contains("eliminado", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public IEnumerable<VisitanteListado> ObtenerListado()
         {
             using var connection = _conexionFactory.ObtenerConexion();
