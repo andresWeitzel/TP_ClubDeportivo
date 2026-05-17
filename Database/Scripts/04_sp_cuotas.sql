@@ -86,3 +86,67 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_actualizar_cuota;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_actualizar_cuota(
+    IN p_id_cuota INT,
+    IN p_monto DECIMAL(10,2),
+    IN p_fecha_vencimiento DATE
+)
+BEGIN
+    UPDATE cuotas
+    SET 
+        monto = p_monto,
+        fecha_vencimiento = p_fecha_vencimiento
+    WHERE id_cuota = p_id_cuota;
+END$$
+
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_eliminar_cuota;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_eliminar_cuota(
+    IN p_id_cuota INT,
+    OUT p_mensaje VARCHAR(255)
+)
+BEGIN
+    DECLARE v_tiene_pagos INT;
+    
+    -- Validar si tiene pagos registrados
+    SELECT COUNT(*) INTO v_tiene_pagos 
+    FROM pagos WHERE cuota_id = p_id_cuota;
+    
+    IF v_tiene_pagos > 0 THEN
+        SET p_mensaje = 'No se puede eliminar. La cuota tiene pagos registrados.';
+    ELSE
+        DELETE FROM cuotas WHERE id_cuota = p_id_cuota;
+        SET p_mensaje = 'Cuota eliminada correctamente.';
+    END IF;
+END$$
+
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_obtener_todas_cuotas;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_obtener_todas_cuotas()
+BEGIN
+    SELECT 
+        id_cuota,
+        socio_id,
+        monto,
+        fecha_emision,
+        fecha_vencimiento,
+        estado,
+        en_mora
+    FROM cuotas
+    ORDER BY fecha_vencimiento DESC;
+END$$
+
+DELIMITER ;
