@@ -2,6 +2,10 @@ namespace TP_ClubDeportivo.Models
 {
     internal class Carnet
     {
+        public int IdCarnet { get; set; }
+
+        public int SocioId { get; set; }
+
         public string Numero { get; set; } = string.Empty;
 
         public DateTime FechaEmision { get; set; }
