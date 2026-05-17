@@ -79,6 +79,43 @@ namespace TP_ClubDeportivo.DAO
             return pagos;
         }
 
+        public bool RegistrarPagoVisitante(int visitanteId, decimal monto, string medioPago, string concepto, out int pagoId)
+        {
+            pagoId = 0;
+            using var connection = _conexionFactory.ObtenerConexion();
+            connection.Open();
+
+            using var command = new MySqlCommand("sp_registrar_pago_visitante", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            command.Parameters.AddWithValue("@p_visitante_id", visitanteId);
+            command.Parameters.AddWithValue("@p_monto", monto);
+            command.Parameters.AddWithValue("@p_medio_pago", medioPago);
+            command.Parameters.AddWithValue("@p_concepto", concepto);
+
+            var outputParam = new MySqlParameter("@p_pago_id", MySqlDbType.Int32)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(outputParam);
+
+            try
+            {
+                command.ExecuteNonQuery();
+                if (int.TryParse(outputParam.Value?.ToString(), out var id))
+                {
+                    pagoId = id;
+                    return true;
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public IEnumerable<Pago> ObtenerPorVisitante(int visitanteId)
         {
             using var connection = _conexionFactory.ObtenerConexion();

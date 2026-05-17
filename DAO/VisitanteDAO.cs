@@ -95,6 +95,27 @@ namespace TP_ClubDeportivo.DAO
             return lista;
         }
 
+        public IEnumerable<VisitanteListado> ObtenerListado()
+        {
+            using var connection = _conexionFactory.ObtenerConexion();
+            connection.Open();
+
+            using var command = new MySqlCommand("sp_obtener_visitantes_listado", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            using var reader = command.ExecuteReader();
+
+            var lista = new List<VisitanteListado>();
+            while (reader.Read())
+            {
+                lista.Add(MapearVisitanteListado(reader));
+            }
+
+            return lista;
+        }
+
         private static Visitante MapearVisitante(MySqlDataReader reader)
         {
             return new Visitante
@@ -107,6 +128,24 @@ namespace TP_ClubDeportivo.DAO
                 Actividad = reader.IsDBNull(reader.GetOrdinal("actividad")) ? string.Empty : reader.GetString("actividad"),
                 FechaIngreso = reader.GetDateTime("fecha_ingreso"),
                 PagoDiarioMonto = reader.GetDecimal("pago_diario_monto")
+            };
+        }
+
+        private static VisitanteListado MapearVisitanteListado(MySqlDataReader reader)
+        {
+            var tienePago = reader.GetInt32(reader.GetOrdinal("tiene_pago")) == 1;
+            return new VisitanteListado
+            {
+                IdVisitante = reader.GetInt32("id_visitante"),
+                Dni = reader.IsDBNull(reader.GetOrdinal("dni")) ? string.Empty : reader.GetString("dni"),
+                Nombre = reader.GetString("nombre"),
+                Apellido = reader.IsDBNull(reader.GetOrdinal("apellido")) ? string.Empty : reader.GetString("apellido"),
+                Telefono = reader.IsDBNull(reader.GetOrdinal("telefono")) ? string.Empty : reader.GetString("telefono"),
+                Actividad = reader.IsDBNull(reader.GetOrdinal("actividad")) ? string.Empty : reader.GetString("actividad"),
+                FechaIngreso = reader.GetDateTime("fecha_ingreso"),
+                Monto = reader.GetDecimal("monto"),
+                MedioPago = reader.IsDBNull(reader.GetOrdinal("medio_pago")) ? string.Empty : reader.GetString("medio_pago"),
+                PagoRegistrado = tienePago ? "Sí" : "No"
             };
         }
     }

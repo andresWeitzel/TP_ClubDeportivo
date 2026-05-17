@@ -71,6 +71,39 @@ END$$
 
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS sp_obtener_visitantes_listado;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_obtener_visitantes_listado()
+BEGIN
+    SELECT
+        v.id_visitante,
+        v.dni,
+        v.nombre,
+        v.apellido,
+        v.telefono,
+        v.actividad,
+        v.fecha_ingreso,
+        v.pago_diario_monto AS monto,
+        (
+            SELECT p.medio_pago
+            FROM pagos p
+            WHERE p.visitante_id = v.id_visitante
+            ORDER BY p.fecha_pago DESC
+            LIMIT 1
+        ) AS medio_pago,
+        (
+            SELECT COUNT(*) > 0
+            FROM pagos p
+            WHERE p.visitante_id = v.id_visitante
+        ) AS tiene_pago
+    FROM visitantes v
+    ORDER BY v.fecha_ingreso DESC;
+END$$
+
+DELIMITER ;
+
 DROP PROCEDURE IF EXISTS sp_actualizar_visitante;
 
 DELIMITER $$
