@@ -178,28 +178,71 @@ CREATE PROCEDURE sp_eliminar_socio(
     OUT p_mensaje VARCHAR(255)
 )
 BEGIN
-    DECLARE v_tiene_cuotas INT;
-    DECLARE v_tiene_pagos INT;
-    DECLARE v_tiene_carnets INT;
-    
-    -- Validar si tiene cuotas asociadas
-    SELECT COUNT(*) INTO v_tiene_cuotas 
-    FROM cuotas WHERE socio_id = p_socio_id;
-    
-    -- Validar si tiene pagos asociados
-    SELECT COUNT(*) INTO v_tiene_pagos 
-    FROM pagos WHERE socio_id = p_socio_id;
-    
-    -- Validar si tiene carnets asociados
-    SELECT COUNT(*) INTO v_tiene_carnets 
-    FROM carnets WHERE socio_id = p_socio_id;
-    
-    -- Si tiene registros asociados, no eliminar
-    IF v_tiene_cuotas > 0 OR v_tiene_pagos > 0 OR v_tiene_carnets > 0 THEN
-        SET p_mensaje = 'No se puede eliminar. El socio tiene registros asociados.';
+    DECLARE v_existe INT;
+    DECLARE v_pagos INT DEFAULT 0;
+    DECLARE v_cuotas INT DEFAULT 0;
+    DECLARE v_carnets INT DEFAULT 0;
+    DECLARE v_fichas INT DEFAULT 0;
+    DECLARE v_rutinas INT DEFAULT 0;
+    DECLARE v_turnos INT DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_mensaje = 'Error al eliminar el socio y sus registros asociados.';
+    END;
+
+    -- Verificar que el socio exista
+    SELECT COUNT(*) INTO v_existe FROM socios WHERE id_socio = p_socio_id;
+    IF v_existe = 0 THEN
+        SET p_mensaje = 'El socio no existe.';
     ELSE
+        START TRANSACTION;
+
+        -- 1) Pagos: tanto los del socio como los de sus cuotas
+        SELECT COUNT(*) INTO v_pagos
+        FROM pagos
+        WHERE socio_id = p_socio_id
+           OR cuota_id IN (SELECT id_cuota FROM cuotas WHERE socio_id = p_socio_id);
+
+        DELETE FROM pagos
+        WHERE socio_id = p_socio_id
+           OR cuota_id IN (SELECT id_cuota FROM cuotas WHERE socio_id = p_socio_id);
+
+        -- 2) Cuotas
+        SELECT COUNT(*) INTO v_cuotas FROM cuotas WHERE socio_id = p_socio_id;
+        DELETE FROM cuotas WHERE socio_id = p_socio_id;
+
+        -- 3) Carnets
+        SELECT COUNT(*) INTO v_carnets FROM carnets WHERE socio_id = p_socio_id;
+        DELETE FROM carnets WHERE socio_id = p_socio_id;
+
+        -- 4) Ficha médica
+        SELECT COUNT(*) INTO v_fichas FROM fichas_medicas WHERE socio_id = p_socio_id;
+        DELETE FROM fichas_medicas WHERE socio_id = p_socio_id;
+
+        -- 5) Rutinas
+        SELECT COUNT(*) INTO v_rutinas FROM rutinas WHERE socio_id = p_socio_id;
+        DELETE FROM rutinas WHERE socio_id = p_socio_id;
+
+        -- 6) Turnos de nutrición
+        SELECT COUNT(*) INTO v_turnos FROM turnos_nutricion WHERE socio_id = p_socio_id;
+        DELETE FROM turnos_nutricion WHERE socio_id = p_socio_id;
+
+        -- 7) Socio
         DELETE FROM socios WHERE id_socio = p_socio_id;
-        SET p_mensaje = 'Socio eliminado correctamente.';
+
+        COMMIT;
+
+        SET p_mensaje = CONCAT(
+            'Socio eliminado correctamente. Asociados borrados: ',
+            v_pagos, ' pago(s), ',
+            v_cuotas, ' cuota(s), ',
+            v_carnets, ' carnet(s), ',
+            v_fichas, ' ficha(s) médica(s), ',
+            v_rutinas, ' rutina(s), ',
+            v_turnos, ' turno(s) de nutrición.'
+        );
     END IF;
 END$$
 

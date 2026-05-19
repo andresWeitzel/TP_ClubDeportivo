@@ -5,8 +5,6 @@ namespace TP_ClubDeportivo.Forms
 {
     public class FormPrincipal : Form
     {
-        private readonly Label lblTituloPagina;
-        private readonly Label lblSubtituloPagina;
         private readonly Panel panelContenido;
         private readonly Panel panelDashboard;
         private readonly ToolStripStatusLabel lblStatus;
@@ -26,7 +24,7 @@ namespace TP_ClubDeportivo.Forms
             var panelTop = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 72,
+                Height = 84,
                 BackColor = UiTheme.Tarjeta,
                 Padding = new Padding(28, 16, 28, 12)
             };
@@ -36,7 +34,7 @@ namespace TP_ClubDeportivo.Forms
                 e.Graphics.DrawLine(pen, 0, panelTop.Height - 1, panelTop.Width, panelTop.Height - 1);
             };
 
-            lblTituloPagina = new Label
+            var lblTituloPagina = new Label
             {
                 Text = "Panel principal",
                 Font = new Font("Segoe UI", 16F, FontStyle.Bold),
@@ -45,13 +43,13 @@ namespace TP_ClubDeportivo.Forms
                 Location = new Point(28, 14)
             };
 
-            lblSubtituloPagina = new Label
+            var lblSubtituloPagina = new Label
             {
                 Text = $"Sesión iniciada como {Sesion.UsuarioActual?.Username}",
                 Font = UiTheme.FuenteSubtitulo,
                 ForeColor = UiTheme.TextoSecundario,
                 AutoSize = true,
-                Location = new Point(30, 42)
+                Location = new Point(30, 50)
             };
 
             var lblRol = new Label
@@ -65,8 +63,8 @@ namespace TP_ClubDeportivo.Forms
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 Anchor = AnchorStyles.Top | AnchorStyles.Right
             };
-            panelTop.Resize += (_, _) => lblRol.Location = new Point(panelTop.Width - lblRol.Width - 28, 22);
-            lblRol.Location = new Point(800, 22);
+            panelTop.Resize += (_, _) => lblRol.Location = new Point(panelTop.Width - lblRol.Width - 28, 28);
+            lblRol.Location = new Point(800, 28);
 
             panelTop.Controls.AddRange([lblTituloPagina, lblSubtituloPagina, lblRol]);
 
@@ -142,12 +140,10 @@ namespace TP_ClubDeportivo.Forms
             var btnSocios = UiTheme.CrearBotonSidebar("Socios", (_, _) => AbrirFormulario<FormSocios>());
             var btnVisitantes = UiTheme.CrearBotonSidebar("Visitantes", (_, _) => AbrirFormulario<FormVisitantes>());
             var btnCuotas = UiTheme.CrearBotonSidebar("Cobrar cuota", (_, _) => AbrirFormulario<FormCobroCuota>());
-            var btnInicio = UiTheme.CrearBotonSidebar("Inicio", (_, _) => MostrarDashboard());
 
             panelNav.Controls.Add(btnCuotas);
             panelNav.Controls.Add(btnVisitantes);
             panelNav.Controls.Add(btnSocios);
-            panelNav.Controls.Add(btnInicio);
 
             var btnSalir = new Button
             {
@@ -179,7 +175,6 @@ namespace TP_ClubDeportivo.Forms
             var contenedor = new Panel
             {
                 Dock = DockStyle.Fill,
-                AutoSize = true,
                 BackColor = UiTheme.Fondo
             };
 
@@ -198,12 +193,12 @@ namespace TP_ClubDeportivo.Forms
                 Font = UiTheme.FuenteSubtitulo,
                 ForeColor = UiTheme.TextoSecundario,
                 AutoSize = true,
-                Location = new Point(2, 36)
+                Location = new Point(2, 50)
             };
 
             var flowTarjetas = new FlowLayoutPanel
             {
-                Location = new Point(0, 80),
+                Location = new Point(0, 96),
                 AutoSize = true,
                 WrapContents = true,
                 BackColor = UiTheme.Fondo,
@@ -231,7 +226,7 @@ namespace TP_ClubDeportivo.Forms
 
             var panelInfo = new Panel
             {
-                Location = new Point(0, 260),
+                Location = new Point(0, 296),
                 Size = new Size(840, 72),
                 BackColor = UiTheme.PrimarioClaro,
                 Padding = new Padding(20, 16, 20, 16)
@@ -248,14 +243,6 @@ namespace TP_ClubDeportivo.Forms
 
             contenedor.Controls.AddRange([lblBienvenida, lblAyuda, flowTarjetas, panelInfo]);
             return contenedor;
-        }
-
-        private void MostrarDashboard()
-        {
-            lblTituloPagina.Text = "Panel principal";
-            lblSubtituloPagina.Text = $"Sesión iniciada como {Sesion.UsuarioActual?.Username}";
-            panelContenido.Controls.Clear();
-            panelContenido.Controls.Add(panelDashboard);
         }
 
         private static void AbrirFormulario<T>() where T : Form, new()

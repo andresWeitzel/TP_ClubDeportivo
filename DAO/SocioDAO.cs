@@ -132,6 +132,62 @@ namespace TP_ClubDeportivo.DAO
             }
         }
 
+        public bool Actualizar(Socio socio)
+        {
+            using var connection = _conexionFactory.ObtenerConexion();
+            connection.Open();
+
+            using var command = new MySqlCommand("sp_actualizar_socio", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            command.Parameters.AddWithValue("@p_socio_id", socio.IdSocio);
+            command.Parameters.AddWithValue("@p_nombre", socio.Nombre);
+            command.Parameters.AddWithValue("@p_apellido", socio.Apellido);
+            command.Parameters.AddWithValue("@p_telefono", socio.Telefono);
+            command.Parameters.AddWithValue("@p_direccion", socio.Direccion);
+            command.Parameters.AddWithValue("@p_email", socio.Email);
+
+            try
+            {
+                return command.ExecuteNonQuery() >= 1;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public bool Eliminar(int socioId, out string mensaje)
+        {
+            mensaje = string.Empty;
+            using var connection = _conexionFactory.ObtenerConexion();
+            connection.Open();
+
+            using var command = new MySqlCommand("sp_eliminar_socio", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+            command.Parameters.AddWithValue("@p_socio_id", socioId);
+
+            var outputParam = new MySqlParameter("@p_mensaje", MySqlDbType.String, 255)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(outputParam);
+
+            try
+            {
+                command.ExecuteNonQuery();
+                mensaje = outputParam.Value?.ToString() ?? string.Empty;
+                return mensaje.Contains("eliminado", StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private static Socio MapearSocio(MySqlDataReader reader)
         {
             return new Socio
