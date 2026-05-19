@@ -3,7 +3,7 @@ namespace TP_ClubDeportivo.Models
     internal class Rutina
     {
 
-        public string IdRutina { get; set; } = string.Empty;
+        public int IdRutina { get; set; } 
 
         public DateTime FechaCreacion { get; set; }
 

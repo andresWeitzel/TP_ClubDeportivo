@@ -2,7 +2,7 @@ namespace TP_ClubDeportivo.Models
 {
     internal class Liquidacion
     {
-        public string IdLiquidacion { get; set; } = string.Empty;
+        public int IdLiquidacion { get; set; } 
 
         public string Periodo { get; set; } = string.Empty;
 

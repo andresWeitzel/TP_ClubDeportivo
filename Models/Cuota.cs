@@ -6,6 +6,8 @@ namespace TP_ClubDeportivo.Models
 
         public int SocioId { get; set; }
 
+        public int VisitanteId { get; set; }
+
         public decimal Monto { get; set; }
 
         public DateTime FechaEmision { get; set; }

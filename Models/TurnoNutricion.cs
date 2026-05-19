@@ -2,7 +2,7 @@ namespace TP_ClubDeportivo.Models
 {
     internal class TurnoNutricion
     {
-        public string IdTurno { get; set; } = string.Empty;
+        public int IdTurno { get; set; } 
 
         public DateTime Fecha { get; set; }
 

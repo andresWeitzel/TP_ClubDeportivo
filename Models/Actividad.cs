@@ -2,7 +2,7 @@ namespace TP_ClubDeportivo.Models
 {
     internal class Actividad
     {
-        public string IdActividad { get; set; } = string.Empty;
+        public int IdActividad { get; set; } 
 
         public string Nombre { get; set; } = string.Empty;
 

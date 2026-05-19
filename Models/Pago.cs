@@ -4,13 +4,9 @@ namespace TP_ClubDeportivo.Models
     {
         public int IdPago { get; set; }
 
-        public string Tipo { get; set; } = string.Empty;
-
-        public int? SocioId { get; set; }
-
         public int? CuotaId { get; set; }
 
-        public int? VisitanteId { get; set; }
+        public string Tipo { get; set; } = string.Empty;
 
         public decimal Monto { get; set; }
 

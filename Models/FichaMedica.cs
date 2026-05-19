@@ -2,7 +2,7 @@ namespace TP_ClubDeportivo.Models
 {
     internal class FichaMedica
     {
-        public string IdFicha { get; set; } = string.Empty;
+        public int IdFicha { get; set; } 
 
         public string Antecedentes { get; set; } = string.Empty;
 

@@ -2,7 +2,7 @@ namespace TP_ClubDeportivo.Models
 {
     internal class Empleado : Persona
     {
-        public string IdEmpleado { get; set; } = string.Empty;
+        public int IdEmpleado { get; set; } 
 
         public double SalarioBase { get; set; }
 
