@@ -15,6 +15,8 @@ namespace TP_ClubDeportivo.Models
 
         public string Telefono { get; set; } = string.Empty;
 
+        public int ActividadId { get; set; }
+
         public string Actividad { get; set; } = string.Empty;
 
         public DateTime FechaIngreso { get; set; }

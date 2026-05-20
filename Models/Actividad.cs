@@ -2,7 +2,7 @@ namespace TP_ClubDeportivo.Models
 {
     internal class Actividad
     {
-        public string IdActividad { get; set; } = string.Empty;
+        public int IdActividad { get; set; }
 
         public string Nombre { get; set; } = string.Empty;
 
@@ -10,11 +10,16 @@ namespace TP_ClubDeportivo.Models
 
         public int CupoMaximo { get; set; }
 
-        public HorarioActividad Horario { get; set; } = new HorarioActividad();
+        public decimal PrecioVisitante { get; set; }
 
-        public void InscribirSocio()
-        {
-            Console.WriteLine("Socio inscripto en la actividad.");
-        }
+        public bool Activa { get; set; } = true;
+
+        public int OcupadosHoy { get; set; }
+
+        public bool TieneCupo => OcupadosHoy < CupoMaximo;
+
+        public string TextoLista => $"{Nombre} ({OcupadosHoy}/{CupoMaximo} hoy)";
+
+        public override string ToString() => TextoLista;
     }
 }

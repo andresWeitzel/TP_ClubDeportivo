@@ -1,7 +1,7 @@
 USE db_club_deportivo;
 
 -- ============================================
--- STORED PROCEDURES - VISITANTES
+-- STORED PROCEDURES - VISITANTES (CU-02)
 -- ============================================
 
 DROP PROCEDURE IF EXISTS sp_crear_visitante;
@@ -13,15 +13,34 @@ CREATE PROCEDURE sp_crear_visitante(
     IN p_nombre VARCHAR(100),
     IN p_apellido VARCHAR(100),
     IN p_telefono VARCHAR(50),
-    IN p_actividad VARCHAR(100),
+    IN p_actividad_id INT,
     IN p_pago_diario_monto DECIMAL(10,2),
     OUT p_visitante_id INT
 )
 BEGIN
-    INSERT INTO visitantes (dni, nombre, apellido, telefono, actividad, fecha_ingreso, pago_diario_monto)
-    VALUES (p_dni, p_nombre, p_apellido, p_telefono, p_actividad, NOW(), p_pago_diario_monto);
-    
-    SET p_visitante_id = LAST_INSERT_ID();
+    DECLARE v_cupo INT DEFAULT 0;
+    DECLARE v_ocupados INT DEFAULT 0;
+
+    SET p_visitante_id = 0;
+
+    SELECT cupo_maximo INTO v_cupo
+    FROM actividades
+    WHERE id_actividad = p_actividad_id AND activa = TRUE
+    LIMIT 1;
+
+    IF v_cupo > 0 THEN
+        SELECT COUNT(*) INTO v_ocupados
+        FROM visitantes
+        WHERE actividad_id = p_actividad_id
+          AND DATE(fecha_ingreso) = CURDATE();
+
+        IF v_ocupados < v_cupo THEN
+            INSERT INTO visitantes (dni, nombre, apellido, telefono, actividad_id, fecha_ingreso, pago_diario_monto)
+            VALUES (p_dni, p_nombre, p_apellido, p_telefono, p_actividad_id, NOW(), p_pago_diario_monto);
+
+            SET p_visitante_id = LAST_INSERT_ID();
+        END IF;
+    END IF;
 END$$
 
 DELIMITER ;
@@ -34,17 +53,19 @@ CREATE PROCEDURE sp_obtener_visitante_por_id(
     IN p_id_visitante INT
 )
 BEGIN
-    SELECT 
-        id_visitante,
-        dni,
-        nombre,
-        apellido,
-        telefono,
-        actividad,
-        fecha_ingreso,
-        pago_diario_monto
-    FROM visitantes
-    WHERE id_visitante = p_id_visitante
+    SELECT
+        v.id_visitante,
+        v.dni,
+        v.nombre,
+        v.apellido,
+        v.telefono,
+        v.actividad_id,
+        a.nombre AS actividad,
+        v.fecha_ingreso,
+        v.pago_diario_monto
+    FROM visitantes v
+    INNER JOIN actividades a ON v.actividad_id = a.id_actividad
+    WHERE v.id_visitante = p_id_visitante
     LIMIT 1;
 END$$
 
@@ -56,17 +77,19 @@ DELIMITER $$
 
 CREATE PROCEDURE sp_obtener_visitantes()
 BEGIN
-    SELECT 
-        id_visitante,
-        dni,
-        nombre,
-        apellido,
-        telefono,
-        actividad,
-        fecha_ingreso,
-        pago_diario_monto
-    FROM visitantes
-    ORDER BY fecha_ingreso DESC;
+    SELECT
+        v.id_visitante,
+        v.dni,
+        v.nombre,
+        v.apellido,
+        v.telefono,
+        v.actividad_id,
+        a.nombre AS actividad,
+        v.fecha_ingreso,
+        v.pago_diario_monto
+    FROM visitantes v
+    INNER JOIN actividades a ON v.actividad_id = a.id_actividad
+    ORDER BY v.fecha_ingreso DESC;
 END$$
 
 DELIMITER ;
@@ -83,7 +106,8 @@ BEGIN
         v.nombre,
         v.apellido,
         v.telefono,
-        v.actividad,
+        v.actividad_id,
+        a.nombre AS actividad,
         v.fecha_ingreso,
         COALESCE(
             (
@@ -108,6 +132,7 @@ BEGIN
             WHERE p.visitante_id = v.id_visitante
         ) AS tiene_pago
     FROM visitantes v
+    INNER JOIN actividades a ON v.actividad_id = a.id_actividad
     ORDER BY v.fecha_ingreso DESC;
 END$$
 
@@ -123,19 +148,42 @@ CREATE PROCEDURE sp_actualizar_visitante(
     IN p_nombre VARCHAR(100),
     IN p_apellido VARCHAR(100),
     IN p_telefono VARCHAR(50),
-    IN p_actividad VARCHAR(100),
-    IN p_pago_diario_monto DECIMAL(10,2)
+    IN p_actividad_id INT,
+    IN p_pago_diario_monto DECIMAL(10,2),
+    OUT p_actualizado BOOLEAN
 )
 BEGIN
-    UPDATE visitantes
-    SET 
-        dni = p_dni,
-        nombre = p_nombre,
-        apellido = p_apellido,
-        telefono = p_telefono,
-        actividad = p_actividad,
-        pago_diario_monto = p_pago_diario_monto
-    WHERE id_visitante = p_id_visitante;
+    DECLARE v_cupo INT DEFAULT 0;
+    DECLARE v_ocupados INT DEFAULT 0;
+
+    SET p_actualizado = FALSE;
+
+    SELECT cupo_maximo INTO v_cupo
+    FROM actividades
+    WHERE id_actividad = p_actividad_id AND activa = TRUE
+    LIMIT 1;
+
+    IF v_cupo > 0 THEN
+        SELECT COUNT(*) INTO v_ocupados
+        FROM visitantes
+        WHERE actividad_id = p_actividad_id
+          AND DATE(fecha_ingreso) = CURDATE()
+          AND id_visitante <> p_id_visitante;
+
+        IF v_ocupados < v_cupo THEN
+            UPDATE visitantes
+            SET
+                dni = p_dni,
+                nombre = p_nombre,
+                apellido = p_apellido,
+                telefono = p_telefono,
+                actividad_id = p_actividad_id,
+                pago_diario_monto = p_pago_diario_monto
+            WHERE id_visitante = p_id_visitante;
+
+            SET p_actualizado = (ROW_COUNT() >= 1);
+        END IF;
+    END IF;
 END$$
 
 DELIMITER ;
@@ -186,21 +234,23 @@ CREATE PROCEDURE sp_buscar_visitantes(
     IN p_busqueda VARCHAR(100)
 )
 BEGIN
-    SELECT 
-        id_visitante,
-        dni,
-        nombre,
-        apellido,
-        telefono,
-        actividad,
-        fecha_ingreso,
-        pago_diario_monto
-    FROM visitantes
-    WHERE nombre LIKE CONCAT('%', p_busqueda, '%')
-        OR apellido LIKE CONCAT('%', p_busqueda, '%')
-        OR dni LIKE CONCAT('%', p_busqueda, '%')
-        OR actividad LIKE CONCAT('%', p_busqueda, '%')
-    ORDER BY fecha_ingreso DESC;
+    SELECT
+        v.id_visitante,
+        v.dni,
+        v.nombre,
+        v.apellido,
+        v.telefono,
+        v.actividad_id,
+        a.nombre AS actividad,
+        v.fecha_ingreso,
+        v.pago_diario_monto
+    FROM visitantes v
+    INNER JOIN actividades a ON v.actividad_id = a.id_actividad
+    WHERE v.nombre LIKE CONCAT('%', p_busqueda, '%')
+        OR v.apellido LIKE CONCAT('%', p_busqueda, '%')
+        OR v.dni LIKE CONCAT('%', p_busqueda, '%')
+        OR a.nombre LIKE CONCAT('%', p_busqueda, '%')
+    ORDER BY v.fecha_ingreso DESC;
 END$$
 
 DELIMITER ;

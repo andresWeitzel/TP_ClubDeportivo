@@ -34,7 +34,7 @@ namespace TP_ClubDeportivo.DAO
             command.Parameters.AddWithValue("@p_nombre", visitante.Nombre);
             command.Parameters.AddWithValue("@p_apellido", visitante.Apellido);
             command.Parameters.AddWithValue("@p_telefono", visitante.Telefono);
-            command.Parameters.AddWithValue("@p_actividad", visitante.Actividad);
+            command.Parameters.AddWithValue("@p_actividad_id", visitante.ActividadId);
             command.Parameters.AddWithValue("@p_pago_diario_monto", visitante.PagoDiarioMonto);
 
             var outputParam = new MySqlParameter("@p_visitante_id", MySqlDbType.Int32)
@@ -46,7 +46,7 @@ namespace TP_ClubDeportivo.DAO
             try
             {
                 command.ExecuteNonQuery();
-                if (int.TryParse(outputParam.Value?.ToString(), out var id))
+                if (int.TryParse(outputParam.Value?.ToString(), out var id) && id > 0)
                 {
                     visitanteId = id;
                     return true;
@@ -109,12 +109,19 @@ namespace TP_ClubDeportivo.DAO
             command.Parameters.AddWithValue("@p_nombre", visitante.Nombre);
             command.Parameters.AddWithValue("@p_apellido", visitante.Apellido);
             command.Parameters.AddWithValue("@p_telefono", visitante.Telefono);
-            command.Parameters.AddWithValue("@p_actividad", visitante.Actividad);
+            command.Parameters.AddWithValue("@p_actividad_id", visitante.ActividadId);
             command.Parameters.AddWithValue("@p_pago_diario_monto", visitante.PagoDiarioMonto);
+
+            var outputParam = new MySqlParameter("@p_actualizado", MySqlDbType.Bit)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(outputParam);
 
             try
             {
-                return command.ExecuteNonQuery() >= 1;
+                command.ExecuteNonQuery();
+                return Convert.ToBoolean(outputParam.Value);
             }
             catch
             {
@@ -182,7 +189,8 @@ namespace TP_ClubDeportivo.DAO
                 Nombre = reader.GetString("nombre"),
                 Apellido = reader.IsDBNull(reader.GetOrdinal("apellido")) ? string.Empty : reader.GetString("apellido"),
                 Telefono = reader.IsDBNull(reader.GetOrdinal("telefono")) ? string.Empty : reader.GetString("telefono"),
-                Actividad = reader.IsDBNull(reader.GetOrdinal("actividad")) ? string.Empty : reader.GetString("actividad"),
+                ActividadId = reader.GetInt32("actividad_id"),
+                Actividad = reader.GetString("actividad"),
                 FechaIngreso = reader.GetDateTime("fecha_ingreso"),
                 PagoDiarioMonto = reader.GetDecimal("pago_diario_monto")
             };
@@ -198,7 +206,8 @@ namespace TP_ClubDeportivo.DAO
                 Nombre = reader.GetString("nombre"),
                 Apellido = reader.IsDBNull(reader.GetOrdinal("apellido")) ? string.Empty : reader.GetString("apellido"),
                 Telefono = reader.IsDBNull(reader.GetOrdinal("telefono")) ? string.Empty : reader.GetString("telefono"),
-                Actividad = reader.IsDBNull(reader.GetOrdinal("actividad")) ? string.Empty : reader.GetString("actividad"),
+                ActividadId = reader.GetInt32("actividad_id"),
+                Actividad = reader.GetString("actividad"),
                 FechaIngreso = reader.GetDateTime("fecha_ingreso"),
                 Monto = reader.GetDecimal("monto"),
                 MedioPago = reader.IsDBNull(reader.GetOrdinal("medio_pago")) ? string.Empty : reader.GetString("medio_pago"),

@@ -8,6 +8,7 @@ USE db_club_deportivo;
 -- Matriz de cobertura:
 --   Roles (6) | Usuarios por rol + inactivo
 --   Socios: AL_DIA, MORA, cuota PAGADA/VENCIDA/por vencer/vigente
+--   Actividades: cupo diario para visitantes (CU-02 / E1)
 --   Visitantes: con y sin pago registrado
 --   Carnets: vigentes y vencido
 --   Pagos: SOCIO y VISITANTE, varios medios
@@ -64,16 +65,28 @@ INSERT INTO socios (dni, nombre, apellido, telefono, direccion, email, estado_cu
 ('13131313', 'Valentina','Acosta',     '1313131313', 'Calle Sur 12',           'valentina.acosta@email.com', 'MORA',   DATE_SUB(CURDATE(), INTERVAL 90 DAY));
 
 -- ============================================
+-- ACTIVIDADES (cupo diario para visitantes — CU-02 / E1)
+-- Crossfit cupo 1 + visitante hoy = prueba de «sin cupo»
+-- ============================================
+INSERT INTO actividades (nombre, descripcion, cupo_maximo, precio_visitante, activa) VALUES
+('Musculación', 'Sala de musculación y máquinas',           25, 50.00, TRUE),
+('Pilates',     'Pilates mat y reformer',                   15, 40.00, TRUE),
+('Natación',    'Pileta y aquagym',                         12, 45.00, TRUE),
+('Yoga',        'Yoga y stretching',                        20, 35.00, TRUE),
+('Spinning',    'Ciclismo indoor',                          18, 55.00, TRUE),
+('Crossfit',    'Entrenamiento funcional alta intensidad',   1, 60.00, TRUE);
+
+-- ============================================
 -- VISITANTES (con y sin pago en tabla pagos)
 -- ============================================
-INSERT INTO visitantes (dni, nombre, apellido, telefono, actividad, fecha_ingreso, pago_diario_monto) VALUES
-('99999999', 'Andrés',  'Pérez',  '9999999999', 'Musculación', DATE_SUB(NOW(), INTERVAL 5 DAY),  50.00),
-('10101010', 'Beatriz', 'Díaz',   '1010101010', 'Pilates',     DATE_SUB(NOW(), INTERVAL 4 DAY),  40.00),
-('20202020', 'Diego',   'Ruiz',   '2020202020', 'Natación',    DATE_SUB(NOW(), INTERVAL 3 DAY),  45.00),
-('30303030', 'Elena',   'Vega',   '3030303030', 'Yoga',        DATE_SUB(NOW(), INTERVAL 2 DAY),  35.00),
-('40404040', 'Felipe',  'Castro', '4040404040', 'Spinning',    DATE_SUB(NOW(), INTERVAL 1 DAY),  55.00),
-('50505050', 'Gabriela','Núñez',  '5050505050', 'Crossfit',    NOW(),                            60.00),
-('60606060', 'Héctor',  'Molina', '6060606060', 'Musculación', CURDATE(),                        50.00);
+INSERT INTO visitantes (dni, nombre, apellido, telefono, actividad_id, fecha_ingreso, pago_diario_monto) VALUES
+('99999999', 'Andrés',  'Pérez',  '9999999999', 1, DATE_SUB(NOW(), INTERVAL 5 DAY),  50.00),
+('10101010', 'Beatriz', 'Díaz',   '1010101010', 2, DATE_SUB(NOW(), INTERVAL 4 DAY),  40.00),
+('20202020', 'Diego',   'Ruiz',   '2020202020', 3, DATE_SUB(NOW(), INTERVAL 3 DAY),  45.00),
+('30303030', 'Elena',   'Vega',   '3030303030', 4, DATE_SUB(NOW(), INTERVAL 2 DAY),  35.00),
+('40404040', 'Felipe',  'Castro', '4040404040', 5, DATE_SUB(NOW(), INTERVAL 1 DAY),  55.00),
+('50505050', 'Gabriela','Núñez',  '5050505050', 6, TIMESTAMP(CURDATE(), '10:00:00'), 60.00),
+('60606060', 'Héctor',  'Molina', '6060606060', 1, CURDATE(),                        50.00);
 
 -- ============================================
 -- PROFESORES (4 especialidades + sueldos variados)
@@ -224,23 +237,23 @@ INSERT INTO nutricionistas (dni, nombre, apellido, telefono, email, matricula) V
 -- ============================================
 -- HORARIOS ACTIVIDAD (todos los días + 5 profesores)
 -- ============================================
-INSERT INTO horarios_actividad (profesor_id, dia_semana, hora_inicio, hora_fin, actividad) VALUES
-(1, 'Lunes',     '09:00:00', '10:00:00', 'Musculación Básica'),
-(1, 'Miércoles', '16:00:00', '17:00:00', 'Musculación Avanzada'),
-(1, 'Viernes',   '18:00:00', '19:00:00', 'Musculación Intermedia'),
-(1, 'Sábado',    '10:00:00', '11:30:00', 'Musculación Funcional'),
-(2, 'Martes',    '10:30:00', '11:30:00', 'Pilates Mat'),
-(2, 'Jueves',    '19:00:00', '20:00:00', 'Pilates Reformer'),
-(2, 'Sábado',    '09:00:00', '10:00:00', 'Pilates Inicial'),
-(3, 'Lunes',     '19:30:00', '20:30:00', 'Spinning Intenso'),
-(3, 'Miércoles', '20:00:00', '21:00:00', 'Spinning Moderado'),
-(3, 'Viernes',   '07:30:00', '08:30:00', 'Spinning Matutino'),
-(4, 'Martes',    '08:00:00', '09:00:00', 'Yoga Matutino'),
-(4, 'Jueves',    '18:30:00', '19:30:00', 'Yoga Vespertino'),
-(4, 'Domingo',   '11:00:00', '12:00:00', 'Yoga Relax'),
-(5, 'Lunes',     '15:00:00', '16:00:00', 'Natación Inicial'),
-(5, 'Miércoles', '15:00:00', '16:00:00', 'Natación Intermedia'),
-(5, 'Viernes',   '17:00:00', '18:00:00', 'Aquagym');
+INSERT INTO horarios_actividad (profesor_id, actividad_id, dia_semana, hora_inicio, hora_fin) VALUES
+(1, 1, 'Lunes',     '09:00:00', '10:00:00'),
+(1, 1, 'Miércoles', '16:00:00', '17:00:00'),
+(1, 1, 'Viernes',   '18:00:00', '19:00:00'),
+(1, 1, 'Sábado',    '10:00:00', '11:30:00'),
+(2, 2, 'Martes',    '10:30:00', '11:30:00'),
+(2, 2, 'Jueves',    '19:00:00', '20:00:00'),
+(2, 2, 'Sábado',    '09:00:00', '10:00:00'),
+(3, 5, 'Lunes',     '19:30:00', '20:30:00'),
+(3, 5, 'Miércoles', '20:00:00', '21:00:00'),
+(3, 5, 'Viernes',   '07:30:00', '08:30:00'),
+(4, 4, 'Martes',    '08:00:00', '09:00:00'),
+(4, 4, 'Jueves',    '18:30:00', '19:30:00'),
+(4, 4, 'Domingo',   '11:00:00', '12:00:00'),
+(5, 3, 'Lunes',     '15:00:00', '16:00:00'),
+(5, 3, 'Miércoles', '15:00:00', '16:00:00'),
+(5, 3, 'Viernes',   '17:00:00', '18:00:00');
 
 -- ============================================
 -- RUTINAS (socios activos; distintos profesores)

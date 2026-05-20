@@ -13,7 +13,9 @@ namespace TP_ClubDeportivo.Forms
         private readonly GroupBox grpFormulario;
         private readonly Panel panelModo;
         private readonly Label lblModo;
-        private readonly TextBox txtDni, txtNombre, txtApellido, txtTelefono, txtActividad;
+        private readonly TextBox txtDni, txtNombre, txtApellido, txtTelefono;
+        private readonly ComboBox cboActividad;
+        private readonly Label lblCupoActividad;
         private readonly NumericUpDown numMonto;
         private readonly ComboBox cboMedioPago;
         private readonly Button btnGuardar;
@@ -24,8 +26,13 @@ namespace TP_ClubDeportivo.Forms
 
         private readonly VisitanteDAO _visitanteDao = new();
         private readonly PagoDAO _pagoDao = new();
+        private readonly ActividadDAO _actividadDao = new();
 
+        private List<Actividad> _actividades = [];
         private int? _visitanteSeleccionadoId;
+        private bool _modoAlta = true;
+        private bool _omitirSeleccionGrilla;
+        private bool _sincronizandoActividad;
         private bool _tienePagoRegistrado;
 
         public FormVisitantes()
@@ -101,7 +108,7 @@ namespace TP_ClubDeportivo.Forms
             var panelCampos = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 248,
+                Height = 280,
                 Padding = new Padding(4, 8, 4, 0)
             };
 
@@ -113,7 +120,34 @@ namespace TP_ClubDeportivo.Forms
             txtNombre = AgregarCampo(panelCampos, "Nombre:", anchoEtiqueta, anchoCampo, ref y);
             txtApellido = AgregarCampo(panelCampos, "Apellido:", anchoEtiqueta, anchoCampo, ref y);
             txtTelefono = AgregarCampo(panelCampos, "Teléfono:", anchoEtiqueta, anchoCampo, ref y);
-            txtActividad = AgregarCampo(panelCampos, "Actividad:", anchoEtiqueta, anchoCampo, ref y);
+            panelCampos.Controls.Add(new Label
+            {
+                Text = "Actividad:",
+                Location = new Point(4, y + 4),
+                Size = new Size(anchoEtiqueta, 22),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = UiTheme.FuenteNormal
+            });
+            cboActividad = new ComboBox
+            {
+                Location = new Point(anchoEtiqueta + 8, y),
+                Size = new Size(anchoCampo, 25),
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font = UiTheme.FuenteNormal
+            };
+            cboActividad.SelectedIndexChanged += CboActividad_SelectedIndexChanged;
+            panelCampos.Controls.Add(cboActividad);
+            y += 36;
+
+            lblCupoActividad = new Label
+            {
+                Location = new Point(anchoEtiqueta + 8, y),
+                Size = new Size(anchoCampo + 120, 22),
+                ForeColor = UiTheme.TextoSecundario,
+                Font = new Font("Segoe UI", 8.5F)
+            };
+            panelCampos.Controls.Add(lblCupoActividad);
+            y += 28;
 
             panelCampos.Controls.Add(new Label
             {
@@ -222,6 +256,7 @@ namespace TP_ClubDeportivo.Forms
             Load += (_, _) =>
             {
                 UiTheme.ConfigurarSplitVertical(split, 0.58);
+                RefrescarActividades();
                 ModoNuevo();
                 CargarVisitantes();
             };
@@ -250,6 +285,11 @@ namespace TP_ClubDeportivo.Forms
 
         private void DgvVisitantes_SelectionChanged(object? sender, EventArgs e)
         {
+            if (_omitirSeleccionGrilla)
+            {
+                return;
+            }
+
             if (dgvVisitantes.CurrentRow?.DataBoundItem is not VisitanteListado fila)
             {
                 return;
@@ -260,6 +300,7 @@ namespace TP_ClubDeportivo.Forms
 
         private void ModoEdicion(VisitanteListado fila)
         {
+            _modoAlta = false;
             _visitanteSeleccionadoId = fila.IdVisitante;
             _tienePagoRegistrado = fila.PagoRegistrado == "Sí";
 
@@ -274,7 +315,7 @@ namespace TP_ClubDeportivo.Forms
             txtNombre.Text = fila.Nombre;
             txtApellido.Text = fila.Apellido;
             txtTelefono.Text = fila.Telefono;
-            txtActividad.Text = fila.Actividad;
+            SeleccionarActividad(fila.ActividadId);
             EstablecerMonto(fila.Monto);
 
             cboMedioPago.Enabled = true;
@@ -290,12 +331,22 @@ namespace TP_ClubDeportivo.Forms
 
         private void ModoNuevo()
         {
+            _modoAlta = true;
             _visitanteSeleccionadoId = null;
             _tienePagoRegistrado = false;
+
+            _omitirSeleccionGrilla = true;
             dgvVisitantes.ClearSelection();
+            if (dgvVisitantes.Rows.Count > 0)
+            {
+                dgvVisitantes.CurrentCell = null;
+            }
+            _omitirSeleccionGrilla = false;
 
             grpFormulario.Text = "Nuevo visitante (CU-02)";
-            lblModo.Text = "Alta: complete los datos y registre el ingreso con su pago diario.";
+            lblModo.Text = "Alta (CU-02): seleccione actividad con cupo, complete datos y registre el pago diario.";
+            RefrescarActividades();
+            SeleccionarPrimeraActividadConCupo();
             btnGuardar.Text = "Registrar ingreso";
             btnEliminar.Enabled = false;
             btnRegistrarPago.Visible = false;
@@ -308,10 +359,11 @@ namespace TP_ClubDeportivo.Forms
 
         private void CargarVisitantes()
         {
-            var idPrevio = _visitanteSeleccionadoId;
+            var idPrevio = _modoAlta ? null : _visitanteSeleccionadoId;
 
             try
             {
+                _omitirSeleccionGrilla = true;
                 dgvVisitantes.DataSource = _visitanteDao.ObtenerListado().ToList();
                 ConfigurarColumnasGrilla();
 
@@ -322,13 +374,23 @@ namespace TP_ClubDeportivo.Forms
                         if (row.DataBoundItem is VisitanteListado v && v.IdVisitante == idPrevio.Value)
                         {
                             row.Selected = true;
-                            break;
+                            dgvVisitantes.CurrentCell = row.Cells[0];
+                            _omitirSeleccionGrilla = false;
+                            return;
                         }
                     }
                 }
+
+                dgvVisitantes.ClearSelection();
+                if (dgvVisitantes.Rows.Count > 0)
+                {
+                    dgvVisitantes.CurrentCell = null;
+                }
+                _omitirSeleccionGrilla = false;
             }
             catch (Exception ex)
             {
+                _omitirSeleccionGrilla = false;
                 MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
@@ -338,6 +400,11 @@ namespace TP_ClubDeportivo.Forms
             if (dgvVisitantes.Columns.Count == 0)
             {
                 return;
+            }
+
+            if (dgvVisitantes.Columns.Contains("ActividadId"))
+            {
+                dgvVisitantes.Columns["ActividadId"]!.Visible = false;
             }
 
             var columnas = new Dictionary<string, string>
@@ -383,13 +450,13 @@ namespace TP_ClubDeportivo.Forms
 
             try
             {
-                if (_visitanteSeleccionadoId.HasValue)
+                if (_modoAlta)
                 {
-                    ActualizarVisitante(monto);
+                    CrearVisitante(monto);
                 }
                 else
                 {
-                    CrearVisitante(monto);
+                    ActualizarVisitante(monto);
                 }
             }
             catch (Exception ex)
@@ -400,15 +467,28 @@ namespace TP_ClubDeportivo.Forms
 
         private void CrearVisitante(decimal monto)
         {
-            var visitante = ConstruirVisitante(monto);
+            var actividadId = ObtenerActividadIdSeleccionada();
+            RefrescarActividades(actividadId);
 
-            if (!_visitanteDao.Crear(visitante, out var visitanteId))
+            if (!ObtenerActividadSeleccionada(out var actividad))
             {
-                lblMensaje.Text = "No se pudo registrar el visitante.";
                 return;
             }
 
-            var concepto = $"Entrada diaria — {visitante.Actividad}";
+            if (!ValidarCupoDisponible(actividad.IdActividad, null, out var nombre, out var ocupados, out var cupoMaximo))
+            {
+                return;
+            }
+
+            var visitante = ConstruirVisitante(monto, actividad.IdActividad);
+
+            if (!_visitanteDao.Crear(visitante, out var visitanteId))
+            {
+                InformarSinCupo(nombre, ocupados, cupoMaximo);
+                return;
+            }
+
+            var concepto = $"Entrada diaria — {actividad.Nombre}";
             if (!_pagoDao.RegistrarPagoVisitante(visitanteId, monto, cboMedioPago.Text, concepto, out var pagoId))
             {
                 lblMensaje.Text = $"Visitante #{visitanteId} creado. No se registró el pago.";
@@ -425,12 +505,25 @@ namespace TP_ClubDeportivo.Forms
 
         private void ActualizarVisitante(decimal monto)
         {
-            var visitante = ConstruirVisitante(monto);
+            var actividadId = ObtenerActividadIdSeleccionada();
+            RefrescarActividades(actividadId);
+
+            if (!ObtenerActividadSeleccionada(out var actividad))
+            {
+                return;
+            }
+
+            if (!ValidarCupoDisponible(actividad.IdActividad, _visitanteSeleccionadoId, out var nombre, out var ocupados, out var cupoMaximo))
+            {
+                return;
+            }
+
+            var visitante = ConstruirVisitante(monto, actividad.IdActividad);
             visitante.IdVisitante = _visitanteSeleccionadoId!.Value;
 
             if (!_visitanteDao.Actualizar(visitante))
             {
-                lblMensaje.Text = "No se pudieron guardar los cambios del visitante.";
+                InformarSinCupo(nombre, ocupados, cupoMaximo);
                 return;
             }
 
@@ -461,7 +554,19 @@ namespace TP_ClubDeportivo.Forms
                 return;
             }
 
-            var visitante = ConstruirVisitante(monto);
+            if (!ObtenerActividadSeleccionada(out var actividad))
+            {
+                return;
+            }
+
+            RefrescarActividades(ObtenerActividadIdSeleccionada());
+
+            if (!ValidarCupoDisponible(actividad.IdActividad, _visitanteSeleccionadoId, out _, out _, out _))
+            {
+                return;
+            }
+
+            var visitante = ConstruirVisitante(monto, actividad.IdActividad);
             visitante.IdVisitante = _visitanteSeleccionadoId.Value;
 
             if (!_visitanteDao.Actualizar(visitante))
@@ -470,7 +575,7 @@ namespace TP_ClubDeportivo.Forms
                 return;
             }
 
-            var concepto = $"Entrada diaria — {txtActividad.Text.Trim()}";
+            var concepto = $"Entrada diaria — {actividad.Nombre}";
             if (!_pagoDao.RegistrarPagoVisitante(_visitanteSeleccionadoId.Value, monto, cboMedioPago.Text, concepto, out var pagoId))
             {
                 MessageBox.Show("No se pudo registrar el pago.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -512,7 +617,7 @@ namespace TP_ClubDeportivo.Forms
             CargarVisitantes();
         }
 
-        private Visitante ConstruirVisitante(decimal monto)
+        private Visitante ConstruirVisitante(decimal monto, int actividadId)
         {
             return new Visitante
             {
@@ -520,7 +625,7 @@ namespace TP_ClubDeportivo.Forms
                 Nombre = txtNombre.Text.Trim(),
                 Apellido = txtApellido.Text.Trim(),
                 Telefono = txtTelefono.Text.Trim(),
-                Actividad = txtActividad.Text.Trim(),
+                ActividadId = actividadId,
                 PagoDiarioMonto = monto
             };
         }
@@ -528,9 +633,9 @@ namespace TP_ClubDeportivo.Forms
         private bool ValidarCampos(out decimal monto)
         {
             monto = numMonto.Value;
-            if (string.IsNullOrWhiteSpace(txtNombre.Text) || string.IsNullOrWhiteSpace(txtActividad.Text))
+            if (string.IsNullOrWhiteSpace(txtNombre.Text) || cboActividad.SelectedItem is null)
             {
-                MessageBox.Show("Complete al menos nombre y actividad.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Complete al menos nombre y seleccione una actividad.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
@@ -570,9 +675,177 @@ namespace TP_ClubDeportivo.Forms
             txtNombre.Clear();
             txtApellido.Clear();
             txtTelefono.Clear();
-            txtActividad.Clear();
             numMonto.Value = 50m;
             cboMedioPago.SelectedIndex = 0;
+        }
+
+        private void CboActividad_SelectedIndexChanged(object? sender, EventArgs e)
+        {
+            if (_sincronizandoActividad)
+            {
+                return;
+            }
+
+            ActualizarInfoCupoActividad();
+        }
+
+        private void RefrescarActividades(int? mantenerActividadId = null)
+        {
+            try
+            {
+                var idPrevio = mantenerActividadId ?? ObtenerActividadIdSeleccionada();
+                _actividades = _actividadDao.ObtenerActivas().ToList();
+
+                _sincronizandoActividad = true;
+                cboActividad.BeginUpdate();
+                cboActividad.DataSource = null;
+                cboActividad.Items.Clear();
+                foreach (var actividad in _actividades)
+                {
+                    cboActividad.Items.Add(actividad);
+                }
+                cboActividad.EndUpdate();
+
+                if (idPrevio.HasValue && SeleccionarActividad(idPrevio.Value))
+                {
+                    // mantiene la selección del usuario
+                }
+                else if (cboActividad.Items.Count > 0)
+                {
+                    cboActividad.SelectedIndex = 0;
+                }
+
+                _sincronizandoActividad = false;
+                ActualizarInfoCupoActividad();
+            }
+            catch (Exception ex)
+            {
+                _sincronizandoActividad = false;
+                MessageBox.Show($"Error al cargar actividades: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private int? ObtenerActividadIdSeleccionada()
+        {
+            if (cboActividad.SelectedItem is Actividad actividad)
+            {
+                return actividad.IdActividad;
+            }
+
+            return null;
+        }
+
+        private bool SeleccionarActividad(int actividadId)
+        {
+            for (var i = 0; i < cboActividad.Items.Count; i++)
+            {
+                if (cboActividad.Items[i] is Actividad act && act.IdActividad == actividadId)
+                {
+                    cboActividad.SelectedIndex = i;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void SeleccionarPrimeraActividadConCupo()
+        {
+            var primera = _actividades.FirstOrDefault(a => a.TieneCupo);
+            if (primera is not null)
+            {
+                SeleccionarActividad(primera.IdActividad);
+            }
+        }
+
+        private bool ObtenerActividadSeleccionada(out Actividad actividad)
+        {
+            actividad = null!;
+            if (cboActividad.SelectedItem is Actividad seleccionada)
+            {
+                actividad = seleccionada;
+                return true;
+            }
+
+            MessageBox.Show("Seleccione una actividad.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        private bool ValidarCupoDisponible(int actividadId, int? excluirVisitanteId, out string nombre, out int ocupados, out int cupoMaximo)
+        {
+            nombre = string.Empty;
+            ocupados = 0;
+            cupoMaximo = 0;
+
+            if (!_actividadDao.VerificarCupo(
+                    actividadId,
+                    excluirVisitanteId,
+                    out var hayCupo,
+                    out ocupados,
+                    out cupoMaximo,
+                    out nombre))
+            {
+                MessageBox.Show("No se pudo verificar el cupo de la actividad.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (!hayCupo)
+            {
+                InformarSinCupo(nombre, ocupados, cupoMaximo);
+                return false;
+            }
+
+            return true;
+        }
+
+        private void InformarSinCupo(string nombreActividad, int ocupados, int cupoMaximo)
+        {
+            var mensaje =
+                $"No hay cupo disponible en «{nombreActividad}» para hoy.\n\n" +
+                $"Ocupados: {ocupados} de {cupoMaximo}.\n\n" +
+                "E1: Se informa al visitante que la actividad está completa.";
+            lblMensaje.Text = $"Sin cupo en {nombreActividad} ({ocupados}/{cupoMaximo}).";
+            MessageBox.Show(mensaje, "Sin cupo en actividad", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        private void ActualizarInfoCupoActividad()
+        {
+            if (cboActividad.SelectedItem is not Actividad act)
+            {
+                lblCupoActividad.Text = string.Empty;
+                return;
+            }
+
+            var hayCupo = act.TieneCupo;
+            var ocupados = act.OcupadosHoy;
+            var cupoMax = act.CupoMaximo;
+
+            if (!_modoAlta && _visitanteSeleccionadoId.HasValue)
+            {
+                _actividadDao.VerificarCupo(act.IdActividad, _visitanteSeleccionadoId, out hayCupo, out ocupados, out cupoMax, out _);
+            }
+
+            if (!_modoAlta && hayCupo)
+            {
+                lblCupoActividad.Text = $"Cupo hoy: {ocupados}/{cupoMax} (este visitante conserva su lugar) — Tarifa: {act.PrecioVisitante:C2}";
+                lblCupoActividad.ForeColor = UiTheme.TextoSecundario;
+            }
+            else if (hayCupo)
+            {
+                lblCupoActividad.Text = $"Cupo hoy: {ocupados}/{cupoMax} — Tarifa sugerida: {act.PrecioVisitante:C2}";
+                lblCupoActividad.ForeColor = UiTheme.TextoSecundario;
+            }
+            else
+            {
+                lblCupoActividad.Text = $"SIN CUPO hoy ({ocupados}/{cupoMax})";
+                lblCupoActividad.ForeColor = Color.DarkRed;
+            }
+
+            if (_modoAlta)
+            {
+                var valor = Math.Clamp(act.PrecioVisitante, numMonto.Minimum, numMonto.Maximum);
+                numMonto.Value = valor;
+            }
         }
     }
 }

@@ -6,6 +6,8 @@ namespace TP_ClubDeportivo.Models
 
         public DateTime FechaIngreso { get; set; }
 
+        public int ActividadId { get; set; }
+
         public string Actividad { get; set; } = string.Empty;
 
         public decimal PagoDiarioMonto { get; set; }

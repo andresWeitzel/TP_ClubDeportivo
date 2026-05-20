@@ -31,15 +31,25 @@ CREATE TABLE socios (
     fecha_alta DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE actividades (
+    id_actividad INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    descripcion VARCHAR(255),
+    cupo_maximo INT NOT NULL DEFAULT 20,
+    precio_visitante DECIMAL(10,2) NOT NULL DEFAULT 50.00,
+    activa BOOLEAN DEFAULT TRUE
+);
+
 CREATE TABLE visitantes (
     id_visitante INT PRIMARY KEY AUTO_INCREMENT,
     dni VARCHAR(20),
     nombre VARCHAR(100) NOT NULL,
     apellido VARCHAR(100),
     telefono VARCHAR(50),
-    actividad VARCHAR(150),
+    actividad_id INT NOT NULL,
     fecha_ingreso DATETIME DEFAULT CURRENT_TIMESTAMP,
-    pago_diario_monto DECIMAL(10,2) DEFAULT 0.00
+    pago_diario_monto DECIMAL(10,2) DEFAULT 0.00,
+    CONSTRAINT fk_visitante_actividad FOREIGN KEY (actividad_id) REFERENCES actividades(id_actividad)
 );
 
 CREATE TABLE carnets (
@@ -92,11 +102,12 @@ CREATE TABLE profesores (
 CREATE TABLE horarios_actividad (
     id_horario INT PRIMARY KEY AUTO_INCREMENT,
     profesor_id INT NOT NULL,
+    actividad_id INT NOT NULL,
     dia_semana VARCHAR(30) NOT NULL,
     hora_inicio TIME NOT NULL,
     hora_fin TIME NOT NULL,
-    actividad VARCHAR(150),
-    CONSTRAINT fk_horario_profesor FOREIGN KEY (profesor_id) REFERENCES profesores(id_profesor)
+    CONSTRAINT fk_horario_profesor FOREIGN KEY (profesor_id) REFERENCES profesores(id_profesor),
+    CONSTRAINT fk_horario_actividad FOREIGN KEY (actividad_id) REFERENCES actividades(id_actividad)
 );
 
 CREATE TABLE asistencias (

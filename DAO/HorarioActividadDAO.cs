@@ -58,16 +58,7 @@ namespace TP_ClubDeportivo.DAO
             var lista = new List<HorarioActividad>();
             while (reader.Read())
             {
-                lista.Add(new HorarioActividad
-                {
-                    IdHorario = reader.GetInt32("id_horario"),
-                    ProfesorId = reader.GetInt32("profesor_id"),
-                    ProfesorNombre = string.Empty,
-                    DiaSemana = reader.GetString("dia_semana"),
-                    HoraInicio = reader.GetTimeSpan("hora_inicio"),
-                    HoraFin = reader.GetTimeSpan("hora_fin"),
-                    Actividad = reader.GetString("actividad")
-                });
+                lista.Add(MapearHorarioActividad(reader));
             }
 
             return lista;
@@ -95,7 +86,7 @@ namespace TP_ClubDeportivo.DAO
             return lista;
         }
 
-        public bool Crear(int profesorId, string dia, TimeSpan horaInicio, TimeSpan horaFin, string actividad, out int horarioId)
+        public bool Crear(int profesorId, int actividadId, string dia, TimeSpan horaInicio, TimeSpan horaFin, out int horarioId)
         {
             horarioId = 0;
             using var connection = _conexionFactory.ObtenerConexion();
@@ -106,10 +97,10 @@ namespace TP_ClubDeportivo.DAO
                 CommandType = CommandType.StoredProcedure
             };
             command.Parameters.AddWithValue("@p_profesor_id", profesorId);
+            command.Parameters.AddWithValue("@p_actividad_id", actividadId);
             command.Parameters.AddWithValue("@p_dia_semana", dia);
             command.Parameters.AddWithValue("@p_hora_inicio", horaInicio);
             command.Parameters.AddWithValue("@p_hora_fin", horaFin);
-            command.Parameters.AddWithValue("@p_actividad", actividad);
 
             var outputParam = new MySqlParameter("@p_horario_id", MySqlDbType.Int32)
             {
@@ -133,7 +124,7 @@ namespace TP_ClubDeportivo.DAO
             }
         }
 
-        public bool Actualizar(int horarioId, string dia, TimeSpan horaInicio, TimeSpan horaFin, string actividad)
+        public bool Actualizar(int horarioId, int actividadId, string dia, TimeSpan horaInicio, TimeSpan horaFin)
         {
             using var connection = _conexionFactory.ObtenerConexion();
             connection.Open();
@@ -143,10 +134,10 @@ namespace TP_ClubDeportivo.DAO
                 CommandType = CommandType.StoredProcedure
             };
             command.Parameters.AddWithValue("@p_id_horario", horarioId);
+            command.Parameters.AddWithValue("@p_actividad_id", actividadId);
             command.Parameters.AddWithValue("@p_dia_semana", dia);
             command.Parameters.AddWithValue("@p_hora_inicio", horaInicio);
             command.Parameters.AddWithValue("@p_hora_fin", horaFin);
-            command.Parameters.AddWithValue("@p_actividad", actividad);
 
             try
             {
@@ -169,13 +160,33 @@ namespace TP_ClubDeportivo.DAO
             };
             command.Parameters.AddWithValue("@p_id_horario", horarioId);
 
+            var outputParam = new MySqlParameter("@p_mensaje", MySqlDbType.String, 255)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(outputParam);
+
             try
             {
-                return command.ExecuteNonQuery() >= 1;
+                command.ExecuteNonQuery();
+                return true;
             }
             catch
             {
                 return false;
+            }
+        }
+
+        private static string LeerColumnaOpcional(MySqlDataReader reader, string columna)
+        {
+            try
+            {
+                var ord = reader.GetOrdinal(columna);
+                return reader.IsDBNull(ord) ? string.Empty : reader.GetString(ord);
+            }
+            catch (IndexOutOfRangeException)
+            {
+                return string.Empty;
             }
         }
 
@@ -185,11 +196,12 @@ namespace TP_ClubDeportivo.DAO
             {
                 IdHorario = reader.GetInt32("id_horario"),
                 ProfesorId = reader.GetInt32("profesor_id"),
-                ProfesorNombre = reader.IsDBNull(reader.GetOrdinal("profesor_nombre")) ? string.Empty : reader.GetString("profesor_nombre"),
+                ProfesorNombre = LeerColumnaOpcional(reader, "profesor_nombre"),
+                ActividadId = reader.GetInt32("actividad_id"),
+                Actividad = reader.GetString("actividad"),
                 DiaSemana = reader.GetString("dia_semana"),
                 HoraInicio = reader.GetTimeSpan("hora_inicio"),
-                HoraFin = reader.GetTimeSpan("hora_fin"),
-                Actividad = reader.GetString("actividad")
+                HoraFin = reader.GetTimeSpan("hora_fin")
             };
         }
     }

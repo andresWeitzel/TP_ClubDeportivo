@@ -14,6 +14,8 @@ namespace TP_ClubDeportivo.Models
 
         public TimeSpan HoraFin { get; set; }
 
+        public int ActividadId { get; set; }
+
         public string Actividad { get; set; } = string.Empty;
     }
 }
