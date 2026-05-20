@@ -140,10 +140,12 @@ namespace TP_ClubDeportivo.Forms
             var btnSocios = UiTheme.CrearBotonSidebar("Socios", (_, _) => AbrirFormulario<FormSocios>());
             var btnVisitantes = UiTheme.CrearBotonSidebar("Visitantes", (_, _) => AbrirFormulario<FormVisitantes>());
             var btnCuotas = UiTheme.CrearBotonSidebar("Cobrar cuota", (_, _) => AbrirFormulario<FormCobroCuota>());
+            var btnFirmarAsistencia = UiTheme.CrearBotonSidebar("Firmar asistencia", (_, _) => AbrirFormulario<FormAsistencias>());
             var btnReportes = UiTheme.CrearBotonSidebar("Reportes", (_, _) => AbrirFormulario<FormReportes>());
             var btnCarnets = UiTheme.CrearBotonSidebar("Carnets", (_, _) => AbrirFormulario<FormCarnets>());
 
             panelNav.Controls.Add(btnReportes);
+            panelNav.Controls.Add(btnFirmarAsistencia);
             panelNav.Controls.Add(btnCarnets);
             panelNav.Controls.Add(btnCuotas);
             panelNav.Controls.Add(btnVisitantes);
@@ -227,6 +229,12 @@ namespace TP_ClubDeportivo.Forms
                 "Buscar socio, ver cuotas y registrar pagos.",
                 "Cuotas",
                 () => AbrirFormulario<FormCobroCuota>()));
+
+            flowTarjetas.Controls.Add(UiTheme.CrearTarjetaAcceso(
+                "Firmar asistencia",
+                "Registrar y firmar asistencia de profesores.",
+                "Profesores",
+                () => AbrirFormulario<FormAsistencias>()));
 
             flowTarjetas.Controls.Add(UiTheme.CrearTarjetaAcceso(
                 "Carnets",
