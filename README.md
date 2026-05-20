@@ -1,20 +1,82 @@
-# TP Club Deportivo
 
-## Descripción general
+# Documento de Análisis y Alcance
 
-Proyecto integrador desarrollado en C# utilizando Windows Forms y MySQL, orientado a la gestión de un club deportivo.
+**Fuente oficial (versión 1.0 — Abril 2026):**  
+[`doc/definiciones_club_deportivo/analisis_club_deportivo.docx`](doc/definiciones_club_deportivo/analisis_club_deportivo.docx)
 
-El sistema permite administrar:
-- socios
-- usuarios
-- actividades
-- pagos
-- cuotas
-- carnets
-- turnos
-- asistencia de profesores
+Incluye diagrama de clases, modelo entidad-relación y casos de uso UML 2.0. El resumen siguiente condensa el alcance funcional del TP; para el detalle completo (tablas, flujos y excepciones), consultar el documento Word.
 
-El proyecto se encuentra organizado en diferentes fases de análisis, modelado e implementación.
+## 1. Introducción
+
+El sistema informatiza las operaciones administrativas, deportivas y de salud de un club con actividades para **socios** (acceso continuo con carnet, ficha médica y cuota mensual) y **visitantes** (ingreso diario con pago). Este análisis es la base de diseño y desarrollo del proyecto.
+
+## 2. Alcance del sistema
+
+| Módulo | Contenido |
+|--------|-----------|
+| **Gestión de usuarios** | Socios (carnet, ficha médica, estado de cuota) y visitantes (pago diario, sin carnet). |
+| **Cuotas y pagos** | Cuotas mensuales con vencimiento; mora suspende acceso hasta regularizar; pagos de visitantes. |
+| **Personal (profesores)** | Horarios, especialidades, asistencia diaria, rutinas personalizadas, liquidación mensual (último día hábil). |
+| **Nutrición** | Turnos semanales, fichas médicas y carga de actividad física permitida. |
+| **Reportes y control** | Cuotas por vencer / vencidas, asistencia de profesores, seguimiento general. |
+
+## 3. Requerimientos funcionales
+
+| ID | Descripción | Módulo |
+|----|-------------|--------|
+| RF-01 | Registrar socios con datos personales, foto y carnet | Usuarios |
+| RF-02 | Registrar visitantes con pago diario | Usuarios |
+| RF-03 | Emitir y reimprimir carnets de socio | Usuarios |
+| RF-04 | Registrar pago de cuota mensual con vencimiento | Cuotas |
+| RF-05 | Bloquear acceso a socio con cuota vencida (mora) | Cuotas |
+| RF-06 | Registrar pago de mora y reactivar acceso | Cuotas |
+| RF-07 | Registrar pago diario de visitante | Pagos |
+| RF-08 | ABM de profesores con especialidad y horarios | Personal |
+| RF-09 | Registrar asistencia diaria de profesores | Personal |
+| RF-10 | Confeccionar rutinas personalizadas por alumno | Personal |
+| RF-11 | Liquidar haberes mensuales (último día hábil) | Personal |
+| RF-12 | Gestionar turnos semanales de nutrición | Nutrición |
+| RF-13 | Administrar fichas médicas de socios | Nutrición |
+| RF-14 | Definir carga de actividad física permitida | Nutrición |
+| RF-15 | Listado diario de cuotas próximas a vencer | Reportes |
+| RF-16 | Listado de socios en mora | Reportes |
+| RF-17 | Reporte de asistencia de profesores | Reportes |
+
+## 4. Modelo conceptual (resumen)
+
+**Clases principales:** `Persona` → `Socio` / `Visitante`; `Cuota`, `Pago`, `Carnet`, `FichaMedica`, `Profesor`, `HorarioClase`, `Asistencia`, `Rutina`, `TurnoNutricion`, `Liquidacion`, `Actividad`.
+
+**Persistencia (ER):** tablas `socios`, `visitantes`, `actividades`, `cuotas`, `pagos`, `profesores`, `horarios_actividad`, `asistencias`, `rutinas`, `fichas_medicas`, `turnos_nutricion`, `liquidaciones`, `carnets` (ver `Database/Scripts/01_DDL.sql`).
+
+## 5. Casos de uso implementados / planificados
+
+| CU | Nombre | Actor | Pantalla / módulo en este repo |
+|----|--------|-------|-------------------------------|
+| CU-01 | Registrar socio | Administrador | `FormSocios` |
+| CU-02 | Registrar visitante | Administrador | `FormVisitantes` |
+| RF-03 | Emitir / renovar carnet | Administrador | `FormCarnets` |
+| CU-03 | Cobrar cuota mensual | Administrador | `FormCobroCuota` |
+| CU-04 | Controlar vencimiento de cuotas | Sistema | `FormReportes` + `sp_controlar_vencimiento_cuotas` |
+| CU-05 | Firmar asistencia | Profesor | Pendiente (datos en BD) |
+| CU-06 | Confeccionar rutina | Profesor | Pendiente (datos en BD) |
+| CU-07 | Gestionar turno de nutrición | Admin / Nutricionista | Pendiente (datos en BD) |
+| CU-08 | Liquidar haberes | Administrador | Pendiente (datos en BD) |
+| CU-09 | Generar reportes | Administrador | `FormReportes` (RF-15, RF-16) |
+
+Detalle de flujos, precondiciones y excepciones (E1, etc.) en el [documento Word](doc/definiciones_club_deportivo/analisis_club_deportivo.docx).
+
+## 6. Glosario
+
+| Término | Definición |
+|---------|------------|
+| Socio | Inscripto con carnet, cuota mensual y acceso continuo. |
+| Visitante | Asistencia ocasional con pago diario. |
+| Cuota | Cargo mensual para mantener el acceso activo. |
+| Mora | Cuota vencida sin pago; acceso suspendido. |
+| Carnet | Identificación del socio. |
+| Rutina | Plan de ejercicios asignado por un profesor. |
+| Ficha médica | Datos de salud y restricciones del socio. |
+| Liquidación | Cálculo y pago de haberes a profesores. |
 
 ---
 
@@ -31,53 +93,6 @@ El proyecto se encuentra organizado en diferentes fases de análisis, modelado e
 ---
 
 
-# Configuración del framework .NET
-
-## Framework inicial
-
-El proyecto fue creado inicialmente utilizando:
-
-```xml
-<TargetFramework>net10.0-windows</TargetFramework>
-```
-
----
-
-## Problema detectado
-
-Al intentar instalar el paquete de conexión MySQL se presentaron incompatibilidades con algunas dependencias del framework .NET 10.
-
-Error detectado:
-
-```text
-No se puede resolver 'Microsoft.NETCore.App.Host.win-x64'
-```
-
----
-
-## Solución aplicada
-
-Se decidió migrar el proyecto a una versión LTS (Long Term Support) más estable y ampliamente compatible.
-
-Archivo modificado:
-
-```text
-TP_ClubDeportivo.csproj
-```
-
-Cambio realizado:
-
-```xml
-<TargetFramework>net10.0-windows</TargetFramework>
-```
-
-por:
-
-```xml
-<TargetFramework>net8.0-windows</TargetFramework>
-```
-
----
 
 # Instalación de .NET 8 SDK
 
@@ -102,22 +117,6 @@ Debe aparecer una versión similar a:
 ```text
 8.0.xxx
 ```
-
----
-
-# Restauración del proyecto
-
-Luego de modificar el framework se ejecuta:
-
-```bash
-dotnet restore
-```
-
-Este comando:
-- restaura dependencias
-- actualiza paquetes
-- recompone la solución
-- valida compatibilidad del framework
 
 ---
 
@@ -176,16 +175,6 @@ dotnet add package MySqlConnector --version 2.3.7
 
 ---
 
-# Motivo de uso de MySqlConnector
-
-Se utiliza `MySqlConnector` debido a:
-- mayor compatibilidad con .NET moderno
-- mejor estabilidad
-- instalación más simple
-- soporte activo
-- mejor integración con WinForms
-
----
 
 # Objetivo de esta configuración
 
@@ -196,7 +185,6 @@ Permitir:
 - implementación de DAOs
 - desarrollo del login del sistema
 
----
 
 ---
 

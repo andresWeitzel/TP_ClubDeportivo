@@ -280,9 +280,19 @@ namespace TP_ClubDeportivo.Forms
                 return;
             }
 
-            EstablecerMonto(numMonto, cuota.Monto);
+            var total = cuota.MontoTotalConRecargo();
+            EstablecerMonto(numMonto, total);
             SincronizarMontoProxima();
             ActualizarDetalleCuota(cuota);
+
+            if (cuota.RequiereRecargo() && cuota.ObtenerRecargo() > 0)
+            {
+                txtConcepto.Text = $"Cuota mensual + recargo mora (cuota #{cuota.IdCuota})";
+            }
+            else
+            {
+                txtConcepto.Text = "Cuota mensual";
+            }
         }
 
         private void ActualizarDetalleCuota(Cuota cuota)
@@ -296,13 +306,20 @@ namespace TP_ClubDeportivo.Forms
             }
 
             btnCobrar.Enabled = true;
-            var mora = cuota.CalcularMora();
-            if (cuota.EstaVencida() || cuota.EnMora)
+            var recargo = cuota.ObtenerRecargo();
+
+            if (cuota.RequiereRecargo() && recargo > 0)
             {
                 lblDetalleCuota.ForeColor = UiTheme.Error;
-                lblDetalleCuota.Text = mora > 0
-                    ? $"Cuota #{cuota.IdCuota} en mora — venció el {cuota.FechaVencimiento:dd/MM/yyyy}. Recargo sugerido: {FormatearMonto(mora)}."
-                    : $"Cuota #{cuota.IdCuota} vencida — venció el {cuota.FechaVencimiento:dd/MM/yyyy}.";
+                lblDetalleCuota.Text =
+                    $"E1 — Cuota #{cuota.IdCuota} en mora (venció el {cuota.FechaVencimiento:dd/MM/yyyy}). " +
+                    $"Base {FormatearMonto(cuota.Monto)} + recargo {FormatearMonto(recargo)} = " +
+                    $"total {FormatearMonto(cuota.MontoTotalConRecargo())}.";
+            }
+            else if (cuota.RequiereRecargo())
+            {
+                lblDetalleCuota.ForeColor = UiTheme.Error;
+                lblDetalleCuota.Text = $"Cuota #{cuota.IdCuota} en mora — venció el {cuota.FechaVencimiento:dd/MM/yyyy}.";
             }
             else
             {
@@ -484,14 +501,35 @@ namespace TP_ClubDeportivo.Forms
                 return;
             }
 
+            var recargo = cuota.ObtenerRecargo();
+            var totalMinimo = cuota.MontoTotalConRecargo();
+            if (cuota.RequiereRecargo() && recargo > 0 && monto < totalMinimo)
+            {
+                MessageBox.Show(
+                    $"E1 — Socio en mora: el cobro debe incluir el recargo adicional.\n\n" +
+                    $"Cuota base: {FormatearMonto(cuota.Monto)}\n" +
+                    $"Recargo mora: {FormatearMonto(recargo)}\n" +
+                    $"Total mínimo: {FormatearMonto(totalMinimo)}",
+                    "Recargo obligatorio",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                EstablecerMonto(numMonto, totalMinimo);
+                return;
+            }
+
             if (chkGenerarProxima.Checked && numMontoProxima.Value <= 0)
             {
                 MessageBox.Show("Ingrese un monto válido para la próxima cuota.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            var textoConfirmacion = recargo > 0
+                ? $"¿Registrar cobro de {FormatearMonto(monto)} por la cuota #{cuota.IdCuota}?\n\n" +
+                  $"Incluye recargo por mora: {FormatearMonto(recargo)} (base {FormatearMonto(cuota.Monto)})."
+                : $"¿Registrar cobro de {FormatearMonto(monto)} por la cuota #{cuota.IdCuota}?";
+
             var confirmacion = MessageBox.Show(
-                $"¿Registrar cobro de {FormatearMonto(monto)} por la cuota #{cuota.IdCuota}?",
+                textoConfirmacion,
                 "Confirmar cobro",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
@@ -515,7 +553,17 @@ namespace TP_ClubDeportivo.Forms
                     return;
                 }
 
-                var mensaje = $"Pago #{pagoId} registrado por {FormatearMonto(monto)}.";
+                var estabaEnMora = _socioSeleccionado.EstadoCuota == "MORA";
+                var sigueEnMora = ActualizarEstadoSocioSegunCuotasPendientesRetornaMora(_socioSeleccionado.IdSocio);
+
+                var mensaje = recargo > 0
+                    ? $"Pago #{pagoId} registrado por {FormatearMonto(monto)} (base {FormatearMonto(cuota.Monto)} + recargo {FormatearMonto(recargo)})."
+                    : $"Pago #{pagoId} registrado por {FormatearMonto(monto)}.";
+
+                if (estabaEnMora && !sigueEnMora)
+                {
+                    mensaje += "\nAcceso reactivado: socio actualizado a AL_DIA.";
+                }
 
                 if (chkGenerarProxima.Checked)
                 {
@@ -536,8 +584,6 @@ namespace TP_ClubDeportivo.Forms
                     }
                 }
 
-                ActualizarEstadoSocioSegunCuotasPendientes(_socioSeleccionado.IdSocio);
-
                 MessageBox.Show(mensaje, "Cobro exitoso", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 BuscarSocio();
             }
@@ -550,7 +596,8 @@ namespace TP_ClubDeportivo.Forms
         /// <summary>
         /// El SP marca AL_DIA al cobrar; si aún hay cuotas vencidas sin pagar, el socio queda en MORA.
         /// </summary>
-        private void ActualizarEstadoSocioSegunCuotasPendientes(int socioId)
+        /// <returns>true si el socio queda en MORA; false si queda AL_DIA.</returns>
+        private bool ActualizarEstadoSocioSegunCuotasPendientesRetornaMora(int socioId)
         {
             var pendientes = _cuotaDao.ObtenerPorSocio(socioId)
                 .Where(c => c.Estado != "PAGADA")
@@ -559,6 +606,7 @@ namespace TP_ClubDeportivo.Forms
             var enMora = pendientes.Exists(c => c.EstaVencida() || c.EnMora || c.Estado == "VENCIDA");
             var nuevoEstado = enMora ? "MORA" : "AL_DIA";
             _socioDao.ActualizarEstadoCuota(socioId, nuevoEstado);
+            return enMora;
         }
 
         private void LimpiarBusqueda()

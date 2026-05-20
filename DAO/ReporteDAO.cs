@@ -66,6 +66,51 @@ namespace TP_ClubDeportivo.DAO
             return lista;
         }
 
+        public ResultadoControlVencimiento? EjecutarControlVencimiento()
+        {
+            using var connection = _conexionFactory.ObtenerConexion();
+            connection.Open();
+
+            using var command = new MySqlCommand("sp_controlar_vencimiento_cuotas", connection)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            var cuotasParam = new MySqlParameter("@p_cuotas_en_mora", MySqlDbType.Int32)
+            {
+                Direction = ParameterDirection.Output
+            };
+            var sociosParam = new MySqlParameter("@p_socios_suspendidos", MySqlDbType.Int32)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(cuotasParam);
+            command.Parameters.Add(sociosParam);
+
+            try
+            {
+                command.ExecuteNonQuery();
+                return new ResultadoControlVencimiento
+                {
+                    CuotasEnMora = LeerEntero(cuotasParam.Value),
+                    SociosSuspendidos = LeerEntero(sociosParam.Value)
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static int LeerEntero(object? valor) =>
+            valor switch
+            {
+                null or DBNull => 0,
+                int i => i,
+                long l => (int)l,
+                _ => int.TryParse(valor.ToString(), out var n) ? n : 0
+            };
+
         private static CuotaReporte MapearCuotaReporte(MySqlDataReader reader, string columnaDias)
         {
             return new CuotaReporte
@@ -74,6 +119,7 @@ namespace TP_ClubDeportivo.DAO
                 Dni = reader.GetString("dni"),
                 Nombre = reader.GetString("nombre"),
                 Apellido = reader.GetString("apellido"),
+                EstadoCuotaSocio = reader.GetString("estado_cuota"),
                 IdCuota = reader.GetInt32("id_cuota"),
                 Monto = reader.GetDecimal("monto"),
                 FechaVencimiento = reader.GetDateTime("fecha_vencimiento"),

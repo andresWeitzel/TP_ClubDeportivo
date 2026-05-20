@@ -17,12 +17,14 @@ namespace TP_ClubDeportivo.Forms
         private readonly Button btnGenerarPorVencer;
         private readonly Button btnGenerarVencidas;
         private readonly Button btnCobrarSeleccion;
+        private readonly Button btnControlVencimiento;
+        private readonly Label lblControlCu04;
 
         private readonly ReporteDAO _reporteDao = new();
 
         public FormReportes()
         {
-            Text = "Reportes de Cuotas";
+            Text = "Control de vencimiento y reportes (CU-04)";
             StartPosition = FormStartPosition.CenterParent;
             Size = new Size(980, 600);
             MinimumSize = new Size(900, 520);
@@ -36,12 +38,12 @@ namespace TP_ClubDeportivo.Forms
                 Padding = new Point(12, 8)
             };
 
-            var tabPorVencer = new TabPage("Por vencer (RF-15)")
+            var tabPorVencer = new TabPage("Próximos a vencer")
             {
                 BackColor = UiTheme.Fondo,
                 Padding = new Padding(12)
             };
-            var tabVencidas = new TabPage("Vencidas (RF-16)")
+            var tabVencidas = new TabPage("En mora / vencidas")
             {
                 BackColor = UiTheme.Fondo,
                 Padding = new Padding(12)
@@ -189,18 +191,87 @@ namespace TP_ClubDeportivo.Forms
                 BackColor = UiTheme.Fondo
             };
 
+            var panelControlCu04 = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 56,
+                BackColor = UiTheme.PrimarioClaro,
+                Padding = new Padding(12, 10, 12, 8)
+            };
+
+            lblControlCu04 = new Label
+            {
+                Dock = DockStyle.Fill,
+                ForeColor = UiTheme.PrimarioOscuro,
+                Font = new Font("Segoe UI", 9.5F, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = "CU-04: al abrir se evalúan vencimientos y se actualizan mora / socios suspendidos."
+            };
+
+            btnControlVencimiento = new Button
+            {
+                Text = "Ejecutar control hoy",
+                Dock = DockStyle.Right,
+                Width = 170,
+                Height = 34
+            };
+            UiTheme.AplicarBotonPrimario(btnControlVencimiento);
+            btnControlVencimiento.Click += (_, _) => EjecutarControlVencimientoCu04(mostrarResumen: true);
+
+            panelControlCu04.Controls.Add(lblControlCu04);
+            panelControlCu04.Controls.Add(btnControlVencimiento);
+
             Controls.Add(tabReportes);
             Controls.Add(btnCobrarSeleccion);
             Controls.Add(lblAyuda);
+            Controls.Add(panelControlCu04);
 
             dgvPorVencer.SelectionChanged += (_, _) => ActualizarBotonCobrar();
             dgvVencidas.SelectionChanged += (_, _) => ActualizarBotonCobrar();
 
-            Load += (_, _) =>
+            Load += (_, _) => EjecutarControlVencimientoCu04(mostrarResumen: false);
+        }
+
+        /// <summary>
+        /// CU-04: evalúa cuotas vencidas, marca mora y suspende socios; luego refresca listados.
+        /// </summary>
+        private void EjecutarControlVencimientoCu04(bool mostrarResumen)
+        {
+            try
             {
+                var resultado = _reporteDao.EjecutarControlVencimiento();
+                if (resultado is null)
+                {
+                    lblControlCu04.Text = "CU-04: no se pudo ejecutar el control (verifique sp_controlar_vencimiento_cuotas).";
+                    lblControlCu04.ForeColor = UiTheme.Error;
+                    return;
+                }
+
+                lblControlCu04.ForeColor = UiTheme.PrimarioOscuro;
+                lblControlCu04.Text =
+                    $"CU-04 ejecutado ({DateTime.Now:dd/MM/yyyy HH:mm}) — " +
+                    $"{resultado.CuotasEnMora} cuota(s) en mora, " +
+                    $"{resultado.SociosSuspendidos} socio(s) suspendido(s) (estado MORA).";
+
                 CargarCuotasPorVencer();
                 CargarCuotasVencidas();
-            };
+
+                if (mostrarResumen)
+                {
+                    MessageBox.Show(
+                        $"Control de vencimiento completado.\n\n" +
+                        $"• Cuotas en mora: {resultado.CuotasEnMora}\n" +
+                        $"• Socios suspendidos (MORA): {resultado.SociosSuspendidos}\n\n" +
+                        "Los listados «Próximos a vencer» y «En mora / vencidas» fueron actualizados.",
+                        "CU-04 — Control de vencimiento",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error en control de vencimiento: {ex.Message}", "CU-04", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private static Panel CrearPanelFiltro()
@@ -276,8 +347,7 @@ namespace TP_ClubDeportivo.Forms
 
         private void RefrescarReportes()
         {
-            CargarCuotasPorVencer();
-            CargarCuotasVencidas();
+            EjecutarControlVencimientoCu04(mostrarResumen: false);
         }
 
         private void CargarCuotasPorVencer()
@@ -397,6 +467,7 @@ namespace TP_ClubDeportivo.Forms
                 ["IdSocio"] = "Nº socio",
                 ["Dni"] = "DNI",
                 ["NombreCompleto"] = "Socio",
+                ["EstadoCuotaSocio"] = "Estado socio",
                 ["IdCuota"] = "Nº cuota",
                 ["Monto"] = "Monto ($)",
                 ["FechaVencimiento"] = "Vencimiento",
@@ -419,6 +490,7 @@ namespace TP_ClubDeportivo.Forms
                 ["IdSocio"] = "Nº socio",
                 ["Dni"] = "DNI",
                 ["NombreCompleto"] = "Socio",
+                ["EstadoCuotaSocio"] = "Estado socio",
                 ["IdCuota"] = "Nº cuota",
                 ["Monto"] = "Monto ($)",
                 ["FechaVencimiento"] = "Vencimiento",

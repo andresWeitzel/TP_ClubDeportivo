@@ -150,3 +150,52 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS sp_controlar_vencimiento_cuotas;
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_controlar_vencimiento_cuotas(
+    OUT p_cuotas_en_mora INT,
+    OUT p_socios_suspendidos INT
+)
+BEGIN
+    -- CU-04 paso 2: cuotas vencidas impagas pasan a mora
+    UPDATE cuotas
+    SET estado = 'VENCIDA', en_mora = TRUE
+    WHERE fecha_vencimiento < CURDATE()
+      AND estado <> 'PAGADA';
+
+    SELECT COUNT(*) INTO p_cuotas_en_mora
+    FROM cuotas
+    WHERE fecha_vencimiento < CURDATE()
+      AND estado <> 'PAGADA';
+
+    -- CU-04 paso 3: socio con deuda vencida queda suspendido (MORA en el sistema)
+    UPDATE socios s
+    SET estado_cuota = 'MORA'
+    WHERE EXISTS (
+        SELECT 1
+        FROM cuotas c
+        WHERE c.socio_id = s.id_socio
+          AND c.fecha_vencimiento < CURDATE()
+          AND c.estado <> 'PAGADA'
+    );
+
+    -- Socios sin deuda vencida vuelven a AL_DIA
+    UPDATE socios s
+    SET estado_cuota = 'AL_DIA'
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM cuotas c
+        WHERE c.socio_id = s.id_socio
+          AND c.fecha_vencimiento < CURDATE()
+          AND c.estado <> 'PAGADA'
+    );
+
+    SELECT COUNT(*) INTO p_socios_suspendidos
+    FROM socios
+    WHERE estado_cuota = 'MORA';
+END$$
+
+DELIMITER ;

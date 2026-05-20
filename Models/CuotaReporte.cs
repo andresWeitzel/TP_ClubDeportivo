@@ -13,6 +13,8 @@ namespace TP_ClubDeportivo.Models
 
         public string Apellido { get; set; } = string.Empty;
 
+        public string EstadoCuotaSocio { get; set; } = string.Empty;
+
         public int IdCuota { get; set; }
 
         public decimal Monto { get; set; }
