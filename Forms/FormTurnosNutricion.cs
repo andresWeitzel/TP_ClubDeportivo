@@ -10,11 +10,26 @@ namespace TP_ClubDeportivo.Forms
 {
     public class FormTurnosNutricion : Form
     {
+        private static readonly string[] CargasPermitidas =
+        [
+            "Sin restricciones",
+            "Actividad moderada",
+            "Entrenamiento controlado",
+            "Cardio y máquinas guiadas",
+            "Yoga y pilates liviano",
+            "Evitar >50kg en espalda",
+            "Pendiente de evaluación",
+            "Sin definir"
+        ];
+
         private readonly SocioDAO _socioDao = new();
         private readonly NutricionistaDAO _nutricionistaDao = new();
         private readonly TurnoNutricionDAO _turnoDao = new();
+        private readonly FichaMedicaDAO _fichaDao = new();
 
         private Socio? _socioSeleccionado;
+        private (int Id, int SocioId, string SocioNombre, decimal Peso, decimal Altura, string Alergias, string Medicacion, string Observaciones, string CargaPermitida)? _fichaSeleccionada;
+        private TurnoSocioViewModel? _turnoConsultaSeleccionado;
         private List<TurnoDisponibleViewModel> _turnosDisponibles = new();
         private List<TurnoSocioViewModel> _turnosSocio = new();
 
@@ -22,6 +37,7 @@ namespace TP_ClubDeportivo.Forms
         private readonly Button btnBuscarSocio;
         private readonly Label lblSocio;
         private readonly Label lblEstadoCuota;
+        private readonly Label lblFichaMedica;
         private readonly ComboBox cbNutricionistas;
         private readonly DateTimePicker dtpFecha;
         private readonly ComboBox cbHorasDisponibles;
@@ -30,21 +46,29 @@ namespace TP_ClubDeportivo.Forms
         private readonly Label lblFechaDisponibles;
         private readonly Label lblMensaje;
         private readonly DataGridView dgvTurnosSocio;
+        private readonly NumericUpDown numPeso;
+        private readonly NumericUpDown numAltura;
+        private readonly TextBox txtAlergias;
+        private readonly TextBox txtMedicacion;
+        private readonly TextBox txtObservacionesFicha;
+        private readonly ComboBox cbCargaPermitida;
+        private readonly Button btnGuardarConsulta;
+        private readonly Label lblConsultaMensaje;
         private bool _autoAdvanceToAvailableDate;
 
         public FormTurnosNutricion()
         {
             Text = "Gestionar turno de nutrición (CU-07)";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(1040, 700);
-            MinimumSize = new Size(940, 620);
+            Size = new Size(1280, 780);
+            MinimumSize = new Size(1100, 700);
             Font = UiTheme.FuenteNormal;
             BackColor = UiTheme.Fondo;
 
             var panelBusqueda = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 120,
+                Height = 148,
                 Padding = new Padding(16),
                 BackColor = UiTheme.Tarjeta
             };
@@ -106,10 +130,218 @@ namespace TP_ClubDeportivo.Forms
                 ForeColor = UiTheme.TextoSecundario
             };
 
-            panelBusqueda.Controls.AddRange([txtDni, btnBuscarSocio, lblSocio, lblEstadoCuota]);
+            lblFichaMedica = new Label
+            {
+                Text = "Ficha médica: -",
+                Location = new Point(420, 60),
+                AutoSize = true,
+                MaximumSize = new Size(700, 0),
+                Font = UiTheme.FuenteNormal,
+                ForeColor = UiTheme.TextoSecundario
+            };
+
+            panelBusqueda.Controls.AddRange([txtDni, btnBuscarSocio, lblSocio, lblEstadoCuota, lblFichaMedica]);
 
             dgvTurnosSocio = CrearGrilla();
             dgvTurnosSocio.Dock = DockStyle.Fill;
+            dgvTurnosSocio.SelectionChanged += (_, _) => SeleccionarTurnoParaConsulta();
+
+            var panelConsulta = new GroupBox
+            {
+                Text = "Consulta — actualizar ficha",
+                Dock = DockStyle.Fill,
+                Padding = new Padding(12, 12, 12, 8),
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold),
+                BackColor = UiTheme.Tarjeta
+            };
+
+            var panelConsultaCampos = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                Padding = new Padding(0, 0, 4, 0)
+            };
+
+            var panelConsultaAcciones = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 92,
+                Padding = new Padding(0, 8, 0, 0)
+            };
+
+            panelConsultaCampos.Controls.Add(new Label
+            {
+                Text = "Peso (kg):",
+                Location = new Point(12, 28),
+                AutoSize = true,
+                Font = UiTheme.FuenteNormal
+            });
+
+            numPeso = new NumericUpDown
+            {
+                Location = new Point(12, 48),
+                Width = 100,
+                DecimalPlaces = 2,
+                Maximum = 300,
+                Minimum = 0,
+                Increment = 0.5M
+            };
+
+            panelConsultaCampos.Controls.Add(new Label
+            {
+                Text = "Altura (m):",
+                Location = new Point(130, 28),
+                AutoSize = true,
+                Font = UiTheme.FuenteNormal
+            });
+
+            numAltura = new NumericUpDown
+            {
+                Location = new Point(130, 48),
+                Width = 100,
+                DecimalPlaces = 2,
+                Maximum = 2.5M,
+                Minimum = 0,
+                Increment = 0.01M
+            };
+
+            panelConsultaCampos.Controls.Add(new Label
+            {
+                Text = "Alergias:",
+                Location = new Point(12, 82),
+                AutoSize = true,
+                Font = UiTheme.FuenteNormal
+            });
+
+            txtAlergias = new TextBox
+            {
+                Location = new Point(12, 102),
+                Width = 218,
+                PlaceholderText = "Ej: Penicilina"
+            };
+            UiTheme.AplicarCampo(txtAlergias);
+
+            panelConsultaCampos.Controls.Add(new Label
+            {
+                Text = "Medicación:",
+                Location = new Point(12, 132),
+                AutoSize = true,
+                Font = UiTheme.FuenteNormal
+            });
+
+            txtMedicacion = new TextBox
+            {
+                Location = new Point(12, 152),
+                Width = 218,
+                PlaceholderText = "Ej: Ninguna"
+            };
+            UiTheme.AplicarCampo(txtMedicacion);
+
+            panelConsultaCampos.Controls.Add(new Label
+            {
+                Text = "Observaciones:",
+                Location = new Point(12, 182),
+                AutoSize = true,
+                Font = UiTheme.FuenteNormal
+            });
+
+            txtObservacionesFicha = new TextBox
+            {
+                Location = new Point(12, 202),
+                Width = 218,
+                Height = 88,
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                PlaceholderText = "Notas de la consulta"
+            };
+            UiTheme.AplicarCampo(txtObservacionesFicha);
+
+            panelConsultaCampos.Controls.Add(new Label
+            {
+                Text = "Carga actividad permitida:",
+                Location = new Point(12, 278),
+                AutoSize = true,
+                Font = UiTheme.FuenteNormal
+            });
+
+            cbCargaPermitida = new ComboBox
+            {
+                Location = new Point(12, 286),
+                Width = 218,
+                DropDownStyle = ComboBoxStyle.DropDown
+            };
+            cbCargaPermitida.Items.AddRange(CargasPermitidas);
+
+            btnGuardarConsulta = new Button
+            {
+                Text = "Guardar ficha",
+                Dock = DockStyle.Top,
+                Height = 38
+            };
+            UiTheme.AplicarBotonPrimario(btnGuardarConsulta);
+            btnGuardarConsulta.Click += (_, _) => GuardarConsulta();
+            btnGuardarConsulta.Enabled = false;
+
+            lblConsultaMensaje = new Label
+            {
+                Text = "Busque un socio para actualizar la ficha médica.",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9F),
+                ForeColor = UiTheme.TextoSecundario
+            };
+
+            panelConsultaCampos.Controls.AddRange(
+            [
+                numPeso, numAltura, txtAlergias, txtMedicacion, txtObservacionesFicha, cbCargaPermitida
+            ]);
+
+            panelConsultaAcciones.Controls.Add(lblConsultaMensaje);
+            panelConsultaAcciones.Controls.Add(btnGuardarConsulta);
+            panelConsulta.Controls.Add(panelConsultaCampos);
+            panelConsulta.Controls.Add(panelConsultaAcciones);
+
+            void AjustarAnchoCamposConsulta()
+            {
+                const int margen = 12;
+                const int separacion = 10;
+                var anchoTotal = Math.Max(280, panelConsultaCampos.ClientSize.Width - margen * 2);
+                var anchoMitad = (anchoTotal - separacion) / 2;
+
+                numPeso.Width = anchoMitad;
+                numPeso.Location = new Point(margen, 48);
+
+                numAltura.Width = anchoMitad;
+                numAltura.Location = new Point(margen + anchoMitad + separacion, 48);
+
+                txtAlergias.Width = anchoTotal;
+                txtAlergias.Location = new Point(margen, 102);
+
+                txtMedicacion.Width = anchoTotal;
+                txtMedicacion.Location = new Point(margen, 152);
+
+                txtObservacionesFicha.Width = anchoTotal;
+                txtObservacionesFicha.Location = new Point(margen, 202);
+
+                cbCargaPermitida.Width = anchoTotal;
+                cbCargaPermitida.Location = new Point(margen, 298);
+            }
+
+            panelConsultaCampos.Resize += (_, _) => AjustarAnchoCamposConsulta();
+
+            var splitCentral = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Vertical,
+                BackColor = UiTheme.Fondo
+            };
+            splitCentral.Panel1.Controls.Add(dgvTurnosSocio);
+            splitCentral.Panel2.Controls.Add(panelConsulta);
+
+            Load += (_, _) =>
+            {
+                UiTheme.ConfigurarSplitVertical(splitCentral, ratioPanel1: 0.38, panel1Min: 240, panel2Min: 320);
+                AjustarAnchoCamposConsulta();
+            };
 
             var panelGrilla = new Panel
             {
@@ -117,7 +349,7 @@ namespace TP_ClubDeportivo.Forms
                 Padding = new Padding(16),
                 BackColor = UiTheme.Fondo
             };
-            panelGrilla.Controls.Add(dgvTurnosSocio);
+            panelGrilla.Controls.Add(splitCentral);
 
             var panelAsignacion = new GroupBox
             {
@@ -288,7 +520,9 @@ namespace TP_ClubDeportivo.Forms
                 {
                     lblSocio.Text = "Socio: no encontrado.";
                     lblEstadoCuota.Text = "Estado cuota: -";
+                    lblFichaMedica.Text = "Ficha médica: -";
                     dgvTurnosSocio.DataSource = null;
+                    LimpiarConsulta();
                     lblMensaje.Text = "No se encontró un socio con ese DNI.";
                     lblMensaje.ForeColor = Color.DarkRed;
                     btnAsignarTurno.Enabled = false;
@@ -301,9 +535,11 @@ namespace TP_ClubDeportivo.Forms
                     ? Color.DarkGreen
                     : Color.OrangeRed;
 
+                CargarFichaMedica();
                 CargarTurnosSocio();
                 CargarTurnosDisponibles();
                 ActualizarEstadoFormulario();
+                ActualizarEstadoConsulta();
             }
             catch
             {
@@ -447,7 +683,11 @@ namespace TP_ClubDeportivo.Forms
             {
                 if (_turnoDao.Crear(_socioSeleccionado.IdSocio, nutricionistaItem.Nutricionista.IdNutricionista, dtpFecha.Value.Date, turnoItem.Turno.Hora, "CONFIRMADO", out _))
                 {
-                    MessageBox.Show("Turno de nutrición asignado correctamente.", "Turnos nutrición", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show(
+                        "Turno asignado. Selecciónelo en la grilla para registrar la consulta y actualizar la ficha médica.",
+                        "Turnos nutrición",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
                     CargarTurnosSocio();
                     CargarTurnosDisponibles();
                     ActualizarEstadoFormulario();
@@ -462,12 +702,199 @@ namespace TP_ClubDeportivo.Forms
             }
         }
 
+        private void CargarFichaMedica()
+        {
+            if (_socioSeleccionado is null)
+            {
+                _fichaSeleccionada = null;
+                lblFichaMedica.Text = "Ficha médica: -";
+                return;
+            }
+
+            try
+            {
+                _fichaSeleccionada = _fichaDao.ObtenerPorSocio(_socioSeleccionado.IdSocio);
+                lblFichaMedica.Text = _fichaSeleccionada is null
+                    ? "Ficha médica: no registrada (se creará al guardar la consulta)"
+                    : $"Ficha médica: Carga actual \"{_fichaSeleccionada.Value.CargaPermitida}\" — Peso {_fichaSeleccionada.Value.Peso} kg, Altura {_fichaSeleccionada.Value.Altura} m";
+                PoblarFormularioConsulta();
+            }
+            catch
+            {
+                lblFichaMedica.Text = "Ficha médica: error al cargar";
+            }
+        }
+
+        private void PoblarFormularioConsulta()
+        {
+            if (_fichaSeleccionada is null)
+            {
+                numPeso.Value = 0;
+                numAltura.Value = 0;
+                txtAlergias.Clear();
+                txtMedicacion.Clear();
+                txtObservacionesFicha.Clear();
+                cbCargaPermitida.Text = string.Empty;
+                return;
+            }
+
+            var ficha = _fichaSeleccionada.Value;
+            numPeso.Value = Math.Min(numPeso.Maximum, Math.Max(numPeso.Minimum, ficha.Peso));
+            numAltura.Value = Math.Min(numAltura.Maximum, Math.Max(numAltura.Minimum, ficha.Altura));
+            txtAlergias.Text = ficha.Alergias;
+            txtMedicacion.Text = ficha.Medicacion;
+            txtObservacionesFicha.Text = ficha.Observaciones;
+            cbCargaPermitida.Text = ficha.CargaPermitida;
+        }
+
+        private void LimpiarConsulta()
+        {
+            _fichaSeleccionada = null;
+            _turnoConsultaSeleccionado = null;
+            PoblarFormularioConsulta();
+            ActualizarEstadoConsulta();
+        }
+
+        private void SeleccionarTurnoParaConsulta()
+        {
+            _turnoConsultaSeleccionado = dgvTurnosSocio.CurrentRow?.DataBoundItem as TurnoSocioViewModel;
+            ActualizarEstadoConsulta();
+        }
+
+        private void ActualizarEstadoConsulta()
+        {
+            if (_socioSeleccionado is null)
+            {
+                btnGuardarConsulta.Enabled = false;
+                lblConsultaMensaje.Text = "Busque un socio para actualizar la ficha médica.";
+                lblConsultaMensaje.ForeColor = UiTheme.TextoSecundario;
+                return;
+            }
+
+            if (_turnoConsultaSeleccionado is { } turno
+                && turno.Estado.Equals("CANCELADO", StringComparison.OrdinalIgnoreCase))
+            {
+                btnGuardarConsulta.Enabled = false;
+                lblConsultaMensaje.Text = "No se puede registrar consulta en un turno cancelado.";
+                lblConsultaMensaje.ForeColor = UiTheme.Error;
+                return;
+            }
+
+            btnGuardarConsulta.Enabled = true;
+
+            if (_turnoConsultaSeleccionado is { } turnoSeleccionado)
+            {
+                lblConsultaMensaje.Text = turnoSeleccionado.Estado.Equals("ATENDIDO", StringComparison.OrdinalIgnoreCase)
+                    ? $"Turno {turnoSeleccionado.Fecha:dd/MM/yyyy} ya atendido. Puede actualizar la ficha."
+                    : $"Turno {turnoSeleccionado.Fecha:dd/MM/yyyy} {turnoSeleccionado.Hora:hh\\:mm} — actualice la ficha y guarde.";
+                lblConsultaMensaje.ForeColor = UiTheme.Primario;
+                return;
+            }
+
+            lblConsultaMensaje.Text = "Actualice la ficha médica del socio y pulse Guardar ficha.";
+            lblConsultaMensaje.ForeColor = UiTheme.TextoSecundario;
+        }
+
+        private void GuardarConsulta()
+        {
+            if (_socioSeleccionado is null)
+            {
+                MessageBox.Show("Busque un socio antes de registrar la consulta.", "Consulta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (numPeso.Value <= 0 || numAltura.Value <= 0)
+            {
+                MessageBox.Show("Ingrese peso y altura válidos.", "Consulta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var cargaPermitida = cbCargaPermitida.Text.Trim();
+            if (string.IsNullOrEmpty(cargaPermitida))
+            {
+                MessageBox.Show("Defina la carga de actividad física permitida.", "Consulta", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                cbCargaPermitida.Focus();
+                return;
+            }
+
+            var peso = numPeso.Value;
+            var altura = numAltura.Value;
+            var alergias = txtAlergias.Text.Trim();
+            var medicacion = txtMedicacion.Text.Trim();
+            var observaciones = txtObservacionesFicha.Text.Trim();
+
+            try
+            {
+                var guardado = false;
+                if (_fichaSeleccionada is null)
+                {
+                    guardado = _fichaDao.Crear(
+                        _socioSeleccionado.IdSocio,
+                        peso,
+                        altura,
+                        alergias,
+                        medicacion,
+                        observaciones,
+                        cargaPermitida,
+                        out _);
+                }
+                else
+                {
+                    guardado = _fichaDao.Actualizar(
+                        _fichaSeleccionada.Value.Id,
+                        peso,
+                        altura,
+                        alergias,
+                        medicacion,
+                        observaciones,
+                        cargaPermitida);
+                }
+
+                if (!guardado)
+                {
+                    MessageBox.Show("No se pudo actualizar la ficha médica.", "Consulta", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                if (_turnoConsultaSeleccionado is { } turno
+                    && !turno.Estado.Equals("CANCELADO", StringComparison.OrdinalIgnoreCase)
+                    && !turno.Estado.Equals("ATENDIDO", StringComparison.OrdinalIgnoreCase)
+                    && _turnoDao.Actualizar(turno.Id, turno.Fecha, turno.Hora, "ATENDIDO"))
+                {
+                    turno.Estado = "ATENDIDO";
+                }
+
+                CargarFichaMedica();
+                CargarTurnosSocio();
+                ActualizarEstadoConsulta();
+
+                MessageBox.Show(
+                    "Ficha médica actualizada correctamente.",
+                    "Consulta",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch
+            {
+                MessageBox.Show("Ocurrió un error al guardar la consulta. Verifique la conexión.", "Consulta", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void ActualizarEstadoFormulario()
         {
             if (_socioSeleccionado is null)
             {
                 lblMensaje.Text = "Busque un socio para continuar.";
                 lblMensaje.ForeColor = UiTheme.TextoSecundario;
+                btnAsignarTurno.Enabled = false;
+                return;
+            }
+
+            if (!(_socioSeleccionado.EstadoCuota.Equals("AL_DIA", StringComparison.OrdinalIgnoreCase)
+                  || _socioSeleccionado.EstadoCuota.Equals("Al día", StringComparison.OrdinalIgnoreCase)))
+            {
+                lblMensaje.Text = "Precondición: el socio debe estar activo (cuota al día) para asignar turnos.";
+                lblMensaje.ForeColor = Color.DarkRed;
                 btnAsignarTurno.Enabled = false;
                 return;
             }

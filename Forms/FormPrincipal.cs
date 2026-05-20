@@ -71,9 +71,9 @@ namespace TP_ClubDeportivo.Forms
             panelContenido = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(28, 20, 28, 12),
+                Padding = new Padding(28, 20, 28, 16),
                 BackColor = UiTheme.Fondo,
-                AutoScroll = true
+                AutoScroll = false
             };
 
             panelDashboard = CrearDashboard();
@@ -185,85 +185,43 @@ namespace TP_ClubDeportivo.Forms
             var contenedor = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = UiTheme.Fondo
+                BackColor = UiTheme.Fondo,
+                Padding = new Padding(0, 0, 8, 0)
             };
 
-            var lblBienvenida = new Label
+            var panelHeader = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 88,
+                BackColor = UiTheme.Fondo,
+                Padding = new Padding(0, 0, 0, 8)
+            };
+
+            panelHeader.Controls.Add(new Label
             {
                 Text = $"Hola, {Sesion.UsuarioActual?.Username}",
                 Font = new Font("Segoe UI", 20F, FontStyle.Bold),
                 ForeColor = UiTheme.Texto,
                 AutoSize = true,
                 Location = new Point(0, 0)
-            };
+            });
 
-            var lblAyuda = new Label
+            panelHeader.Controls.Add(new Label
             {
                 Text = "Elegí un módulo para comenzar o usá el menú lateral.",
                 Font = UiTheme.FuenteSubtitulo,
                 ForeColor = UiTheme.TextoSecundario,
                 AutoSize = true,
-                Location = new Point(2, 50)
-            };
-
-            var flowTarjetas = new FlowLayoutPanel
-            {
-                Location = new Point(0, 96),
-                AutoSize = true,
-                WrapContents = true,
-                BackColor = UiTheme.Fondo,
-                Padding = new Padding(0),
-                MinimumSize = new Size(800, 180)
-            };
-
-            flowTarjetas.Controls.Add(UiTheme.CrearTarjetaAcceso(
-                "Socios",
-                "Registrar socios, consultar listado y buscar por DNI.",
-                "Gestión",
-                () => AbrirFormulario<FormSocios>()));
-
-            flowTarjetas.Controls.Add(UiTheme.CrearTarjetaAcceso(
-                "Visitantes",
-                "Ingreso diario con registro de pago.",
-                "Gestión",
-                () => AbrirFormulario<FormVisitantes>()));
-
-            flowTarjetas.Controls.Add(UiTheme.CrearTarjetaAcceso(
-                "Cobrar cuota",
-                "Buscar socio, ver cuotas y registrar pagos.",
-                "Cuotas",
-                () => AbrirFormulario<FormCobroCuota>()));
-
-            flowTarjetas.Controls.Add(UiTheme.CrearTarjetaAcceso(
-                "Confeccionar rutina",
-                "Buscar socio y crear una nueva rutina basada en ficha médica.",
-                "Profesores",
-                () => AbrirFormulario<FormRutinas>()));
-
-            flowTarjetas.Controls.Add(UiTheme.CrearTarjetaAcceso(
-                "Firmar asistencia",
-                "Registrar y firmar asistencia de profesores.",
-                "Profesores",
-                () => AbrirFormulario<FormAsistencias>()));
-
-            flowTarjetas.Controls.Add(UiTheme.CrearTarjetaAcceso(
-                "Carnets",
-                "Consultar y renovar carnet de socio por DNI.",
-                "Gestión",
-                () => AbrirFormulario<FormCarnets>()));
-
-            flowTarjetas.Controls.Add(UiTheme.CrearTarjetaAcceso(
-                "Reportes",
-                "Cuotas por vencer y cuotas vencidas para gestión de cobranza.",
-                "Reportes",
-                () => AbrirFormulario<FormReportes>()));
+                Location = new Point(2, 48)
+            });
 
             var panelInfo = new Panel
             {
-                Location = new Point(0, 296),
-                Size = new Size(840, 72),
+                Dock = DockStyle.Bottom,
+                Height = 56,
                 BackColor = UiTheme.PrimarioClaro,
-                Padding = new Padding(20, 16, 20, 16)
+                Padding = new Padding(20, 12, 20, 12),
+                Margin = new Padding(0, 16, 0, 0)
             };
 
             panelInfo.Controls.Add(new Label
@@ -275,8 +233,35 @@ namespace TP_ClubDeportivo.Forms
                 TextAlign = ContentAlignment.MiddleLeft
             });
 
-            contenedor.Controls.AddRange([lblBienvenida, lblAyuda, flowTarjetas, panelInfo]);
+            var flowTarjetas = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoScroll = true,
+                BackColor = UiTheme.Fondo,
+                Padding = new Padding(4, 8, 16, 16)
+            };
+
+            AgregarTarjeta(flowTarjetas, "Socios", "Registrar socios, consultar listado y buscar por DNI.", "Gestión", () => AbrirFormulario<FormSocios>());
+            AgregarTarjeta(flowTarjetas, "Visitantes", "Ingreso diario con registro de pago.", "Gestión", () => AbrirFormulario<FormVisitantes>());
+            AgregarTarjeta(flowTarjetas, "Cobrar cuota", "Buscar socio, ver cuotas y registrar pagos.", "Cuotas", () => AbrirFormulario<FormCobroCuota>());
+            AgregarTarjeta(flowTarjetas, "Carnets", "Consultar y renovar carnet de socio por DNI.", "Gestión", () => AbrirFormulario<FormCarnets>());
+            AgregarTarjeta(flowTarjetas, "Confeccionar rutina", "Crear rutina según ficha médica del socio.", "Profesores", () => AbrirFormulario<FormRutinas>());
+            AgregarTarjeta(flowTarjetas, "Firmar asistencia", "Registrar y firmar asistencia de profesores.", "Profesores", () => AbrirFormulario<FormAsistencias>());
+            AgregarTarjeta(flowTarjetas, "Turnos nutrición", "Asignar turnos y actualizar ficha médica en consulta.", "Nutrición", () => AbrirFormulario<FormTurnosNutricion>());
+            AgregarTarjeta(flowTarjetas, "Reportes", "Cuotas por vencer y vencidas para gestión de cobranza.", "Reportes", () => AbrirFormulario<FormReportes>());
+
+            contenedor.Controls.Add(flowTarjetas);
+            contenedor.Controls.Add(panelInfo);
+            contenedor.Controls.Add(panelHeader);
+
             return contenedor;
+        }
+
+        private static void AgregarTarjeta(FlowLayoutPanel contenedor, string titulo, string descripcion, string modulo, Action abrir)
+        {
+            contenedor.Controls.Add(UiTheme.CrearTarjetaAcceso(titulo, descripcion, modulo, abrir));
         }
 
         private static void AbrirFormulario<T>() where T : Form, new()

@@ -54,11 +54,12 @@ namespace TP_ClubDeportivo.Forms
         {
             var tarjeta = new Panel
             {
-                Size = new Size(260, 150),
+                Size = new Size(272, 158),
+                MinimumSize = new Size(240, 150),
                 BackColor = Tarjeta,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(12),
-                Padding = new Padding(20)
+                Margin = new Padding(16, 16, 16, 16),
+                Padding = new Padding(20, 18, 16, 16)
             };
 
             tarjeta.Paint += (_, e) =>
@@ -95,8 +96,8 @@ namespace TP_ClubDeportivo.Forms
                 Text = descripcion,
                 Font = FuenteSubtitulo,
                 ForeColor = TextoSecundario,
-                Size = new Size(220, 48),
-                Location = new Point(16, 68),
+                Size = new Size(228, 52),
+                Location = new Point(16, 66),
                 BackColor = Color.Transparent
             };
 
@@ -106,7 +107,7 @@ namespace TP_ClubDeportivo.Forms
                 Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 ForeColor = Primario,
                 AutoSize = true,
-                Location = new Point(16, 118),
+                Location = new Point(16, 124),
                 BackColor = Color.Transparent
             };
 
@@ -150,27 +151,58 @@ namespace TP_ClubDeportivo.Forms
             return btn;
         }
 
-        public static void ConfigurarSplitVertical(SplitContainer split, double ratioPanel1 = 0.58)
+        public static void ConfigurarSplitVertical(
+            SplitContainer split,
+            double ratioPanel1 = 0.58,
+            int panel1Min = 260,
+            int panel2Min = 260)
         {
-            split.Panel1MinSize = 260;
-            split.Panel2MinSize = 260;
             split.SplitterWidth = 4;
 
             void Ajustar()
             {
-                if (split.Width <= 0)
+                if (split.Width <= 0 || split.IsDisposed)
                 {
                     return;
                 }
 
+                var anchoMinimoTotal = panel1Min + panel2Min + split.SplitterWidth;
+                if (split.Width < anchoMinimoTotal)
+                {
+                    var tercio = Math.Max(80, (split.Width - split.SplitterWidth) / 3);
+                    split.Panel1MinSize = tercio;
+                    split.Panel2MinSize = tercio;
+                }
+                else
+                {
+                    split.Panel1MinSize = panel1Min;
+                    split.Panel2MinSize = panel2Min;
+                }
+
                 var maximo = split.Width - split.Panel2MinSize - split.SplitterWidth;
                 var minimo = split.Panel1MinSize;
+                if (maximo < minimo)
+                {
+                    return;
+                }
+
                 var deseado = (int)(split.Width * ratioPanel1);
-                split.SplitterDistance = Math.Clamp(deseado, minimo, Math.Max(minimo, maximo));
+                try
+                {
+                    split.SplitterDistance = Math.Clamp(deseado, minimo, maximo);
+                }
+                catch (InvalidOperationException)
+                {
+                    // El control aún no tiene tamaño definitivo; se reintenta en el próximo Resize.
+                }
             }
 
             split.Resize += (_, _) => Ajustar();
-            Ajustar();
+            split.HandleCreated += (_, _) => Ajustar();
+            if (split.IsHandleCreated)
+            {
+                Ajustar();
+            }
         }
 
         public static void PintarFondoGradiente(Panel panel, PaintEventArgs e)
