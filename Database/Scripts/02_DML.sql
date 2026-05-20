@@ -45,6 +45,8 @@ INSERT INTO usuario (NombreUsu, PassUsu, RolUsu, Activo) VALUES
 ('daniela_nutri','nutri456',123, TRUE),
 ('socio_demo',  'socio1', 124, TRUE),
 ('visit_demo',  'vis1',    125, TRUE),
+('testeador',   'test123',121, TRUE),
+('nutri_test',  'nutri789',123, TRUE),
 ('inactivo',    '1234',   120, FALSE);
 
 -- ============================================
@@ -62,7 +64,9 @@ INSERT INTO socios (dni, nombre, apellido, telefono, direccion, email, estado_cu
 ('77777777', 'Miguel',   'Ramírez',    '7777777777', 'Callejón del Sur',       'miguel.ramirez@email.com',   'AL_DIA', DATE_SUB(CURDATE(), INTERVAL 60 DAY)),
 ('88888888', 'Claudia',  'Moreno',     '8888888888', 'Plaza Mayor 10',         'claudia.moreno@email.com',   'AL_DIA', DATE_SUB(CURDATE(), INTERVAL 45 DAY)),
 ('12121212', 'Diego',    'Herrera',    '1212121212', 'Barrio Norte 55',        'diego.herrera@email.com',    'AL_DIA', DATE_SUB(CURDATE(), INTERVAL 15 DAY)),
-('13131313', 'Valentina','Acosta',     '1313131313', 'Calle Sur 12',           'valentina.acosta@email.com', 'MORA',   DATE_SUB(CURDATE(), INTERVAL 90 DAY));
+('13131313', 'Valentina','Acosta',     '13131313',   'Calle Sur 12',           'valentina.acosta@email.com', 'MORA',   DATE_SUB(CURDATE(), INTERVAL 90 DAY)),
+('14141414', 'Bruno',    'Cruz',       '1414141414', 'Paseo Colón 720',        'bruno.cruz@email.com',       'AL_DIA', DATE_SUB(CURDATE(), INTERVAL 30 DAY)),
+('15151515', 'Carla',    'Duarte',     '1515151515', 'Av. 9 de Julio 1240',    'carla.duarte@email.com',     'MORA',   DATE_SUB(CURDATE(), INTERVAL 75 DAY));
 
 -- ============================================
 -- ACTIVIDADES (cupo diario para visitantes — CU-02 / E1)
@@ -86,7 +90,9 @@ INSERT INTO visitantes (dni, nombre, apellido, telefono, actividad_id, fecha_ing
 ('30303030', 'Elena',   'Vega',   '3030303030', 4, DATE_SUB(NOW(), INTERVAL 2 DAY),  35.00),
 ('40404040', 'Felipe',  'Castro', '4040404040', 5, DATE_SUB(NOW(), INTERVAL 1 DAY),  55.00),
 ('50505050', 'Gabriela','Núñez',  '5050505050', 6, TIMESTAMP(CURDATE(), '10:00:00'), 60.00),
-('60606060', 'Héctor',  'Molina', '6060606060', 1, CURDATE(),                        50.00);
+('60606060', 'Héctor',  'Molina', '6060606060', 1, CURDATE(),                        50.00),
+('70707070', 'Ivana',   'López',  '7070707070', 2, DATE_SUB(NOW(), INTERVAL 6 DAY),  40.00),
+('80808080', 'Mauro',   'García', '8080808080', 3, DATE_SUB(NOW(), INTERVAL 7 DAY),  45.00);
 
 -- ============================================
 -- PROFESORES (4 especialidades + sueldos variados)
@@ -96,7 +102,8 @@ INSERT INTO profesores (dni, nombre, apellido, telefono, email, especialidad, su
 ('60606060', 'Patricia', 'Instructora', '6060606060', 'patricia.instructor@email.com','Pilates',     4500.00),
 ('70707070', 'Marcos',   'Coach',       '7070707070', 'marcos.coach@email.com',       'Spinning',    4800.00),
 ('80808080', 'Verónica', 'Entrenadora', '8080808080', 'veronica.trainer@email.com',   'Yoga',        4200.00),
-('90909091', 'Lucas',    'Benítez',     '9090909191', 'lucas.benitez@email.com',      'Natación',    4600.00);
+('90909091', 'Lucas',    'Benítez',     '9090909191', 'lucas.benitez@email.com',      'Natación',    4600.00),
+('91919192', 'Federico', 'Montes',      '9191919192', 'federico.montes@email.com',    'Crossfit',    5200.00);
 
 -- ============================================
 -- CARNETS (1 por socio; socio 8 con carnet vencido)
@@ -267,7 +274,9 @@ INSERT INTO rutinas (socio_id, profesor_id, descripcion, fecha_creacion, observa
 (8,  4, 'Yoga + movilidad para sobrepeso',                                    CURDATE(), 'Sin impacto'),
 (9,  1, 'Adaptación inicial: circuito full body ligero',                      CURDATE(), 'Primera rutina'),
 (10, 3, 'Spinning + trabajo de base',                                         CURDATE(), '2 sesiones/semana'),
-(11, 5, 'Natación técnica: crol y espalda',                                   CURDATE(), 'Evaluar en pileta');
+(11, 5, 'Natación técnica: crol y espalda',                                   CURDATE(), 'Evaluar en pileta'),
+(12, 4, 'Movilidad y yoga: core y estiramientos',                               CURDATE(), 'Sesión para flexibilidad'),
+(14, 2, 'Pilates + fuerza profunda',                                           CURDATE(), 'Hacer énfasis en postura');
 
 -- ============================================
 -- ASISTENCIAS PROFESORES (presente/ausente; con/sin firma)
@@ -304,7 +313,11 @@ INSERT INTO turnos_nutricion (socio_id, nutricionista_id, fecha, hora, estado) V
 (9,  1, DATE_ADD(CURDATE(), INTERVAL 15 DAY), '10:30:00', 'DISPONIBLE'),
 (10, 2, DATE_SUB(CURDATE(), INTERVAL 7 DAY),  '11:30:00', 'CONFIRMADO'),
 (4,  1, DATE_ADD(CURDATE(), INTERVAL 20 DAY), '08:30:00', 'DISPONIBLE'),
-(12, 3, DATE_ADD(CURDATE(), INTERVAL 6 DAY),  '17:00:00', 'CONFIRMADO');
+(12, 3, DATE_ADD(CURDATE(), INTERVAL 6 DAY),  '17:00:00', 'CONFIRMADO'),
+(1,  2, DATE_ADD(CURDATE(), INTERVAL 3 DAY),  '09:00:00', 'DISPONIBLE'),
+(3,  3, DATE_ADD(CURDATE(), INTERVAL 4 DAY),  '13:30:00', 'DISPONIBLE'),
+(5,  1, DATE_ADD(CURDATE(), INTERVAL 7 DAY),  '10:15:00', 'DISPONIBLE'),
+(7,  2, DATE_ADD(CURDATE(), INTERVAL 10 DAY), '12:00:00', 'DISPONIBLE');
 
 -- ============================================
 -- LIQUIDACIONES (PAGADO / PENDIENTE; varios meses)
