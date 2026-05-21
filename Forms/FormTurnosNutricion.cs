@@ -339,6 +339,11 @@ namespace TP_ClubDeportivo.Forms
 
             Load += (_, _) =>
             {
+                if (!Permisos.ValidarAccesoAlAbrir(this, Permisos.Modulo.TurnosNutricion))
+                {
+                    return;
+                }
+
                 UiTheme.ConfigurarSplitVertical(splitCentral, ratioPanel1: 0.38, panel1Min: 240, panel2Min: 320);
                 AjustarAnchoCamposConsulta();
             };

@@ -156,7 +156,15 @@ namespace TP_ClubDeportivo.Forms
             Controls.Add(panelAccion);
             Controls.Add(panelSuperior);
 
-            Load += (_, _) => CargarProfesores();
+            Load += (_, _) =>
+            {
+                if (!Permisos.ValidarAccesoAlAbrir(this, Permisos.Modulo.FirmarAsistencia))
+                {
+                    return;
+                }
+
+                CargarProfesores();
+            };
         }
 
         private void CargarProfesores()

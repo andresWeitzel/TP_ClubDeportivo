@@ -8,6 +8,7 @@ namespace TP_ClubDeportivo.Forms
         private readonly Panel panelContenido;
         private readonly Panel panelDashboard;
         private readonly ToolStripStatusLabel lblStatus;
+        private readonly Label lblSubtituloPagina;
 
         public FormPrincipal()
         {
@@ -43,9 +44,9 @@ namespace TP_ClubDeportivo.Forms
                 Location = new Point(28, 14)
             };
 
-            var lblSubtituloPagina = new Label
+            lblSubtituloPagina = new Label
             {
-                Text = $"Sesión iniciada como {Sesion.UsuarioActual?.Username}",
+                Text = $"Sesión: {Sesion.UsuarioActual?.Username} · Rol: {Sesion.UsuarioActual?.Rol}",
                 Font = UiTheme.FuenteSubtitulo,
                 ForeColor = UiTheme.TextoSecundario,
                 AutoSize = true,
@@ -84,7 +85,7 @@ namespace TP_ClubDeportivo.Forms
                 BackColor = UiTheme.Tarjeta,
                 SizingGrip = false
             };
-            lblStatus = new ToolStripStatusLabel($"Conectado · {Sesion.UsuarioActual?.Rol}")
+            lblStatus = new ToolStripStatusLabel(ObtenerTextoEstado())
             {
                 ForeColor = UiTheme.TextoSecundario
             };
@@ -96,6 +97,33 @@ namespace TP_ClubDeportivo.Forms
 
             Controls.Add(panelDerecho);
             Controls.Add(panelSidebar);
+        }
+
+        private static string ObtenerTextoEstado()
+        {
+            var rol = Sesion.UsuarioActual?.Rol ?? "";
+            var modulos = ContarModulosVisibles();
+            return $"Conectado · {rol} · {modulos} módulo(s) disponible(s)";
+        }
+
+        private static int ContarModulosVisibles()
+        {
+            var total = 0;
+            foreach (Permisos.Modulo modulo in Enum.GetValues(typeof(Permisos.Modulo)))
+            {
+                if (modulo is Permisos.Modulo.ReporteAsistenciaProfesores
+                    or Permisos.Modulo.ControlVencimientoCuotas)
+                {
+                    continue;
+                }
+
+                if (Permisos.PuedeAcceder(modulo))
+                {
+                    total++;
+                }
+            }
+
+            return total;
         }
 
         private Panel CrearSidebar()
@@ -137,25 +165,15 @@ namespace TP_ClubDeportivo.Forms
                 Padding = new Padding(8, 4, 8, 0)
             };
 
-            var btnSocios = UiTheme.CrearBotonSidebar("Socios", (_, _) => AbrirFormulario<FormSocios>());
-            var btnVisitantes = UiTheme.CrearBotonSidebar("Visitantes", (_, _) => AbrirFormulario<FormVisitantes>());
-            var btnCuotas = UiTheme.CrearBotonSidebar("Cobrar cuota", (_, _) => AbrirFormulario<FormCobroCuota>());
-            var btnFirmarAsistencia = UiTheme.CrearBotonSidebar("Firmar asistencia", (_, _) => AbrirFormulario<FormAsistencias>());
-            var btnRutinas = UiTheme.CrearBotonSidebar("Confeccionar rutina", (_, _) => AbrirFormulario<FormRutinas>());
-            var btnTurnosNutricion = UiTheme.CrearBotonSidebar("Turnos nutrición", (_, _) => AbrirFormulario<FormTurnosNutricion>());
-            var btnReportes = UiTheme.CrearBotonSidebar("Reportes", (_, _) => AbrirFormulario<FormReportes>());
-            var btnLiquidarHaberes = UiTheme.CrearBotonSidebar("Liquidar haberes", (_, _) => AbrirFormulario<FormLiquidarHaberes>());
-            var btnCarnets = UiTheme.CrearBotonSidebar("Carnets", (_, _) => AbrirFormulario<FormCarnets>());
-
-            panelNav.Controls.Add(btnReportes);
-            panelNav.Controls.Add(btnLiquidarHaberes);
-            panelNav.Controls.Add(btnTurnosNutricion);
-            panelNav.Controls.Add(btnRutinas);
-            panelNav.Controls.Add(btnFirmarAsistencia);
-            panelNav.Controls.Add(btnCarnets);
-            panelNav.Controls.Add(btnCuotas);
-            panelNav.Controls.Add(btnVisitantes);
-            panelNav.Controls.Add(btnSocios);
+            AgregarBotonSidebar(panelNav, Permisos.Modulo.Reportes, "Reportes", () => AbrirFormulario<FormReportes>());
+            AgregarBotonSidebar(panelNav, Permisos.Modulo.LiquidarHaberes, "Liquidar haberes", () => AbrirFormulario<FormLiquidarHaberes>());
+            AgregarBotonSidebar(panelNav, Permisos.Modulo.TurnosNutricion, "Turnos nutrición", () => AbrirFormulario<FormTurnosNutricion>());
+            AgregarBotonSidebar(panelNav, Permisos.Modulo.Rutinas, "Confeccionar rutina", () => AbrirFormulario<FormRutinas>());
+            AgregarBotonSidebar(panelNav, Permisos.Modulo.FirmarAsistencia, "Firmar asistencia", () => AbrirFormulario<FormAsistencias>());
+            AgregarBotonSidebar(panelNav, Permisos.Modulo.Carnets, "Carnets", () => AbrirFormulario<FormCarnets>());
+            AgregarBotonSidebar(panelNav, Permisos.Modulo.CobroCuota, "Cobrar cuota", () => AbrirFormulario<FormCobroCuota>());
+            AgregarBotonSidebar(panelNav, Permisos.Modulo.Visitantes, "Visitantes", () => AbrirFormulario<FormVisitantes>());
+            AgregarBotonSidebar(panelNav, Permisos.Modulo.Socios, "Socios", () => AbrirFormulario<FormSocios>());
 
             var btnSalir = new Button
             {
@@ -180,6 +198,17 @@ namespace TP_ClubDeportivo.Forms
             sidebar.Controls.Add(lblMarca);
 
             return sidebar;
+        }
+
+        private static void AgregarBotonSidebar(Panel panelNav, Permisos.Modulo modulo, string texto, Action abrir)
+        {
+            if (!Permisos.PuedeAcceder(modulo))
+            {
+                return;
+            }
+
+            var btn = UiTheme.CrearBotonSidebar(texto, (_, _) => abrir());
+            panelNav.Controls.Add(btn);
         }
 
         private Panel CrearDashboard()
@@ -210,7 +239,7 @@ namespace TP_ClubDeportivo.Forms
 
             panelHeader.Controls.Add(new Label
             {
-                Text = "Elegí un módulo para comenzar o usá el menú lateral.",
+                Text = ObtenerSubtituloDashboard(),
                 Font = UiTheme.FuenteSubtitulo,
                 ForeColor = UiTheme.TextoSecundario,
                 AutoSize = true,
@@ -228,7 +257,7 @@ namespace TP_ClubDeportivo.Forms
 
             panelInfo.Controls.Add(new Label
             {
-                Text = "Tip: desde el menú lateral podés acceder a cualquier módulo en cualquier momento.",
+                Text = ObtenerTipDashboard(),
                 Dock = DockStyle.Fill,
                 ForeColor = UiTheme.PrimarioOscuro,
                 Font = UiTheme.FuenteSubtitulo,
@@ -245,15 +274,27 @@ namespace TP_ClubDeportivo.Forms
                 Padding = new Padding(4, 8, 16, 16)
             };
 
-            AgregarTarjeta(flowTarjetas, "Socios", "Registrar socios, consultar listado y buscar por DNI.", "Gestión", () => AbrirFormulario<FormSocios>());
-            AgregarTarjeta(flowTarjetas, "Visitantes", "Ingreso diario con registro de pago.", "Gestión", () => AbrirFormulario<FormVisitantes>());
-            AgregarTarjeta(flowTarjetas, "Cobrar cuota", "Buscar socio, ver cuotas y registrar pagos.", "Cuotas", () => AbrirFormulario<FormCobroCuota>());
-            AgregarTarjeta(flowTarjetas, "Carnets", "Consultar y renovar carnet de socio por DNI.", "Gestión", () => AbrirFormulario<FormCarnets>());
-            AgregarTarjeta(flowTarjetas, "Confeccionar rutina", "Crear rutina según ficha médica del socio.", "Profesores", () => AbrirFormulario<FormRutinas>());
-            AgregarTarjeta(flowTarjetas, "Firmar asistencia", "Registrar y firmar asistencia de profesores.", "Profesores", () => AbrirFormulario<FormAsistencias>());
-            AgregarTarjeta(flowTarjetas, "Turnos nutrición", "Asignar turnos y actualizar ficha médica en consulta.", "Nutrición", () => AbrirFormulario<FormTurnosNutricion>());
-            AgregarTarjeta(flowTarjetas, "Reportes", "Cuotas por vencer, morosos y asistencia de profesores.", "Reportes", () => AbrirFormulario<FormReportes>());
-            AgregarTarjeta(flowTarjetas, "Liquidar haberes", "Calcular liquidaciones, emitir recibos y pagar a profesores.", "Personal", () => AbrirFormulario<FormLiquidarHaberes>());
+            AgregarTarjeta(flowTarjetas, Permisos.Modulo.Socios, "Socios", "Registrar socios, consultar listado y buscar por DNI.", "Gestión", () => AbrirFormulario<FormSocios>());
+            AgregarTarjeta(flowTarjetas, Permisos.Modulo.Visitantes, "Visitantes", "Ingreso diario con registro de pago.", "Gestión", () => AbrirFormulario<FormVisitantes>());
+            AgregarTarjeta(flowTarjetas, Permisos.Modulo.CobroCuota, "Cobrar cuota", "Buscar socio, ver cuotas y registrar pagos.", "Cuotas", () => AbrirFormulario<FormCobroCuota>());
+            AgregarTarjeta(flowTarjetas, Permisos.Modulo.Carnets, "Carnets", "Consultar y renovar carnet de socio por DNI.", "Gestión", () => AbrirFormulario<FormCarnets>());
+            AgregarTarjeta(flowTarjetas, Permisos.Modulo.Rutinas, "Confeccionar rutina", "Crear rutina según ficha médica del socio.", "Profesores", () => AbrirFormulario<FormRutinas>());
+            AgregarTarjeta(flowTarjetas, Permisos.Modulo.FirmarAsistencia, "Firmar asistencia", "Registrar y firmar asistencia de profesores.", "Profesores", () => AbrirFormulario<FormAsistencias>());
+            AgregarTarjeta(flowTarjetas, Permisos.Modulo.TurnosNutricion, "Turnos nutrición", "Asignar turnos y actualizar ficha médica en consulta.", "Nutrición", () => AbrirFormulario<FormTurnosNutricion>());
+            AgregarTarjeta(flowTarjetas, Permisos.Modulo.Reportes, "Reportes", "Cuotas por vencer, morosos y asistencia de profesores.", "Reportes", () => AbrirFormulario<FormReportes>());
+            AgregarTarjeta(flowTarjetas, Permisos.Modulo.LiquidarHaberes, "Liquidar haberes", "Calcular liquidaciones, emitir recibos y pagar a profesores.", "Personal", () => AbrirFormulario<FormLiquidarHaberes>());
+
+            if (flowTarjetas.Controls.Count == 0)
+            {
+                flowTarjetas.Controls.Add(new Label
+                {
+                    Text = "No hay módulos habilitados para su rol.",
+                    AutoSize = true,
+                    Font = new Font("Segoe UI", 11F, FontStyle.Italic),
+                    ForeColor = UiTheme.TextoSecundario,
+                    Padding = new Padding(8)
+                });
+            }
 
             contenedor.Controls.Add(flowTarjetas);
             contenedor.Controls.Add(panelInfo);
@@ -262,13 +303,74 @@ namespace TP_ClubDeportivo.Forms
             return contenedor;
         }
 
-        private static void AgregarTarjeta(FlowLayoutPanel contenedor, string titulo, string descripcion, string modulo, Action abrir)
+        private static string ObtenerSubtituloDashboard()
         {
-            contenedor.Controls.Add(UiTheme.CrearTarjetaAcceso(titulo, descripcion, modulo, abrir));
+            if (Sesion.TieneRol(Permisos.Administrador))
+            {
+                return "Acceso completo — todos los módulos del club.";
+            }
+
+            if (Sesion.TieneRol(Permisos.Empleado))
+            {
+                return "Recepción y cobranza — socios, visitantes, cuotas y reportes.";
+            }
+
+            if (Sesion.TieneRol(Permisos.Profesor))
+            {
+                return "Área deportiva — asistencia y rutinas personalizadas.";
+            }
+
+            if (Sesion.TieneRol(Permisos.Nutricionista))
+            {
+                return "Área de salud — turnos y fichas médicas en consulta.";
+            }
+
+            return "Elegí un módulo del menú lateral.";
+        }
+
+        private static string ObtenerTipDashboard()
+        {
+            if (Sesion.TieneRol(Permisos.Administrador))
+            {
+                return "Administrador: acceso a gestión, cobranza, personal, nutrición y reportes.";
+            }
+
+            if (Sesion.TieneRol(Permisos.Empleado))
+            {
+                return "Empleado: socios, visitantes, carnets, cobro de cuotas y reportes de mora.";
+            }
+
+            if (Sesion.TieneRol(Permisos.Profesor))
+            {
+                return "Profesor: solo firmar asistencia y confeccionar rutinas.";
+            }
+
+            if (Sesion.TieneRol(Permisos.Nutricionista))
+            {
+                return "Nutricionista: solo gestión de turnos de nutrición.";
+            }
+
+            return "Los módulos visibles dependen de su rol en el sistema.";
+        }
+
+        private static void AgregarTarjeta(FlowLayoutPanel contenedor, Permisos.Modulo modulo, string titulo, string descripcion, string categoria, Action abrir)
+        {
+            if (!Permisos.PuedeAcceder(modulo))
+            {
+                return;
+            }
+
+            contenedor.Controls.Add(UiTheme.CrearTarjetaAcceso(titulo, descripcion, categoria, abrir));
         }
 
         private static void AbrirFormulario<T>() where T : Form, new()
         {
+            if (!Permisos.IntentarAbrirFormulario<T>(out var mensaje))
+            {
+                MessageBox.Show(mensaje, "Acceso denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             using var form = new T();
             form.ShowDialog();
         }

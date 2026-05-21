@@ -322,6 +322,11 @@ namespace TP_ClubDeportivo.Forms
 
             Load += (_, _) =>
             {
+                if (!Permisos.ValidarAccesoAlAbrir(this, Permisos.Modulo.LiquidarHaberes))
+                {
+                    return;
+                }
+
                 panelBadgePeriodo.Location = new Point(panelSuperior.Width - panelBadgePeriodo.Width - 28, 72);
                 ActualizarAvisoDiaHabil();
                 ActualizarEtiquetasPeriodo();

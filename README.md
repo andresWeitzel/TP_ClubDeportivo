@@ -61,9 +61,28 @@ El sistema informatiza las operaciones administrativas, deportivas y de salud de
 | CU-06 | Confeccionar rutina | Profesor | Pendiente (datos en BD) |
 | CU-07 | Gestionar turno de nutrición | Admin / Nutricionista | Pendiente (datos en BD) |
 | CU-08 | Liquidar haberes | Administrador | `FormLiquidarHaberes` |
-| CU-09 | Generar reportes | Administrador | `FormReportes` (RF-15, RF-16, RF-17 + exportar CSV) |
+| CU-09 | Generar reportes | Administrador / Empleado | `FormReportes` (RF-15, RF-16; RF-17 solo Administrador) |
 
 Detalle de flujos, precondiciones y excepciones (E1, etc.) en el [documento Word](doc/definiciones_club_deportivo/analisis_club_deportivo.docx).
+
+### Control de acceso por rol
+
+La UI filtra menú, panel principal y formularios según `Permisos.cs` y `Sesion.TieneRol`.
+
+| Módulo | Administrador | Empleado | Profesor | Nutricionista | Socio / Visitante |
+|--------|:-------------:|:--------:|:--------:|:-------------:|:-----------------:|
+| Socios (CU-01) | ✓ | ✓ | — | — | — |
+| Visitantes (CU-02) | ✓ | ✓ | — | — | — |
+| Cobrar cuota (CU-03) | ✓ | ✓ | — | — | — |
+| Carnets (RF-03) | ✓ | ✓ | — | — | — |
+| Firmar asistencia (CU-05) | ✓ | — | ✓ | — | — |
+| Rutinas (CU-06) | ✓ | — | ✓ | — | — |
+| Turnos nutrición (CU-07) | ✓ | — | — | ✓ | — |
+| Reportes cuotas (CU-09) | ✓ | ✓ | — | — | — |
+| Reporte asistencia RF-17 | ✓ | — | — | — | — |
+| Liquidar haberes (CU-08) | ✓ | — | — | — | — |
+
+**Socio** y **Visitante** no ingresan a la app de gestión (solo personal interno). Usuarios de prueba en `02_DML.sql`: `admin`, `empleado1`, `juan_prof`, `maria_nutri`, etc.
 
 ## 6. Glosario
 

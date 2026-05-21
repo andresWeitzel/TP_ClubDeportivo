@@ -261,7 +261,15 @@ namespace TP_ClubDeportivo.Forms
             Controls.Add(panelRutinas);
             Controls.Add(panelSuperior);
 
-            Load += (_, _) => CargarProfesores();
+            Load += (_, _) =>
+            {
+                if (!Permisos.ValidarAccesoAlAbrir(this, Permisos.Modulo.Rutinas))
+                {
+                    return;
+                }
+
+                CargarProfesores();
+            };
         }
 
         private void CargarProfesores()

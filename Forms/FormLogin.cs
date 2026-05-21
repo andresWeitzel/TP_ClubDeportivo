@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using TP_ClubDeportivo;
 using TP_ClubDeportivo.DAO;
 
 namespace TP_ClubDeportivo.Forms
@@ -274,6 +275,21 @@ namespace TP_ClubDeportivo.Forms
                 GuardarUsuarioRecordado(usuario);
 
                 Sesion.Iniciar(resultado);
+
+                if (!Permisos.PuedeIngresarAlSistema())
+                {
+                    var rol = resultado.Rol;
+                    using var accesoDenegado = new FormAccesoDenegado(
+                        $"El rol «{rol}» no puede usar la aplicación de gestión del club.\n\n" +
+                        "Esta versión está destinada a personal interno: Administrador, Empleado, Profesor o Nutricionista.\n\n" +
+                        "Los usuarios Socio y Visitante no tienen acceso a este módulo.");
+                    accesoDenegado.ShowDialog();
+                    Sesion.Cerrar();
+                    txtPassword.Clear();
+                    txtPassword.Focus();
+                    return;
+                }
+
                 Hide();
                 using var principal = new FormPrincipal();
                 principal.ShowDialog();

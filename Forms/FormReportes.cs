@@ -27,6 +27,8 @@ namespace TP_ClubDeportivo.Forms
         private readonly Label lblResumenAsistencia;
         private readonly Button btnGenerarAsistencia;
         private readonly Button btnExportar;
+        private readonly TabPage tabAsistencia;
+        private readonly Panel panelControlCu04;
 
         private readonly ReporteDAO _reporteDao = new();
         private readonly ProfesorDAO _profesorDao = new();
@@ -57,7 +59,7 @@ namespace TP_ClubDeportivo.Forms
                 BackColor = UiTheme.Fondo,
                 Padding = new Padding(12)
             };
-            var tabAsistencia = new TabPage("Asistencia profesores")
+            tabAsistencia = new TabPage("Asistencia profesores")
             {
                 BackColor = UiTheme.Fondo,
                 Padding = new Padding(12)
@@ -363,7 +365,7 @@ namespace TP_ClubDeportivo.Forms
                 ForeColor = UiTheme.TextoSecundario
             });
 
-            var panelControlCu04 = new Panel
+            panelControlCu04 = new Panel
             {
                 Dock = DockStyle.Top,
                 Height = 56,
@@ -402,12 +404,51 @@ namespace TP_ClubDeportivo.Forms
             dgvPorVencer.SelectionChanged += (_, _) => ActualizarBotonCobrar();
             dgvVencidas.SelectionChanged += (_, _) => ActualizarBotonCobrar();
 
-            Load += (_, _) =>
+            Load += FormReportes_Load;
+        }
+
+        private void FormReportes_Load(object? sender, EventArgs e)
+        {
+            if (!Permisos.IntentarAcceder(Permisos.Modulo.Reportes, out var mensaje))
+            {
+                MessageBox.Show(mensaje, "Acceso denegado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Close();
+                return;
+            }
+
+            AplicarPermisosPorRol();
+
+            if (Permisos.PuedeAcceder(Permisos.Modulo.ReporteAsistenciaProfesores))
             {
                 CargarProfesoresFiltroAsistencia();
+            }
+
+            if (Permisos.PuedeAcceder(Permisos.Modulo.ControlVencimientoCuotas))
+            {
                 EjecutarControlVencimientoCu04(mostrarResumen: false);
-                ActualizarBotonExportar();
-            };
+            }
+            else
+            {
+                CargarCuotasPorVencer();
+                CargarCuotasVencidas();
+            }
+
+            ActualizarBotonExportar();
+        }
+
+        private void AplicarPermisosPorRol()
+        {
+            if (!Permisos.PuedeAcceder(Permisos.Modulo.ReporteAsistenciaProfesores)
+                && tabReportes.TabPages.Contains(tabAsistencia))
+            {
+                tabReportes.TabPages.Remove(tabAsistencia);
+            }
+
+            panelControlCu04.Visible = Permisos.PuedeAcceder(Permisos.Modulo.ControlVencimientoCuotas);
+
+            Text = Sesion.TieneRol(Permisos.Administrador)
+                ? "Generar reportes (CU-09)"
+                : "Reportes de cobranza (CU-09)";
         }
 
         private void CargarProfesoresFiltroAsistencia()
