@@ -60,7 +60,7 @@ El sistema informatiza las operaciones administrativas, deportivas y de salud de
 | CU-05 | Firmar asistencia | Profesor | Pendiente (datos en BD) |
 | CU-06 | Confeccionar rutina | Profesor | Pendiente (datos en BD) |
 | CU-07 | Gestionar turno de nutrición | Admin / Nutricionista | Pendiente (datos en BD) |
-| CU-08 | Liquidar haberes | Administrador | Pendiente (datos en BD) |
+| CU-08 | Liquidar haberes | Administrador | `FormLiquidarHaberes` |
 | CU-09 | Generar reportes | Administrador | `FormReportes` (RF-15, RF-16) |
 
 Detalle de flujos, precondiciones y excepciones (E1, etc.) en el [documento Word](doc/definiciones_club_deportivo/analisis_club_deportivo.docx).

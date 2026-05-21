@@ -144,9 +144,11 @@ namespace TP_ClubDeportivo.Forms
             var btnRutinas = UiTheme.CrearBotonSidebar("Confeccionar rutina", (_, _) => AbrirFormulario<FormRutinas>());
             var btnTurnosNutricion = UiTheme.CrearBotonSidebar("Turnos nutrición", (_, _) => AbrirFormulario<FormTurnosNutricion>());
             var btnReportes = UiTheme.CrearBotonSidebar("Reportes", (_, _) => AbrirFormulario<FormReportes>());
+            var btnLiquidarHaberes = UiTheme.CrearBotonSidebar("Liquidar haberes", (_, _) => AbrirFormulario<FormLiquidarHaberes>());
             var btnCarnets = UiTheme.CrearBotonSidebar("Carnets", (_, _) => AbrirFormulario<FormCarnets>());
 
             panelNav.Controls.Add(btnReportes);
+            panelNav.Controls.Add(btnLiquidarHaberes);
             panelNav.Controls.Add(btnTurnosNutricion);
             panelNav.Controls.Add(btnRutinas);
             panelNav.Controls.Add(btnFirmarAsistencia);
@@ -251,6 +253,7 @@ namespace TP_ClubDeportivo.Forms
             AgregarTarjeta(flowTarjetas, "Firmar asistencia", "Registrar y firmar asistencia de profesores.", "Profesores", () => AbrirFormulario<FormAsistencias>());
             AgregarTarjeta(flowTarjetas, "Turnos nutrición", "Asignar turnos y actualizar ficha médica en consulta.", "Nutrición", () => AbrirFormulario<FormTurnosNutricion>());
             AgregarTarjeta(flowTarjetas, "Reportes", "Cuotas por vencer y vencidas para gestión de cobranza.", "Reportes", () => AbrirFormulario<FormReportes>());
+            AgregarTarjeta(flowTarjetas, "Liquidar haberes", "Calcular liquidaciones, emitir recibos y pagar a profesores.", "Personal", () => AbrirFormulario<FormLiquidarHaberes>());
 
             contenedor.Controls.Add(flowTarjetas);
             contenedor.Controls.Add(panelInfo);

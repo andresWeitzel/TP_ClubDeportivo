@@ -85,7 +85,7 @@ namespace TP_ClubDeportivo.DAO
             return lista;
         }
 
-        public IEnumerable<(int Id, int ProfesorId, string ProfesorNombre, string Especialidad, int Mes, int Anio, decimal MontoBruto, decimal Descuentos, decimal MontoNeto, string Estado)> ObtenerPorPeriodo(int mes, int anio)
+        public IEnumerable<(int Id, int ProfesorId, string ProfesorNombre, string Especialidad, int Mes, int Anio, decimal MontoBruto, decimal Descuentos, decimal MontoNeto, DateTime? FechaPago, string Estado)> ObtenerPorPeriodo(int mes, int anio)
         {
             using var connection = _conexionFactory.ObtenerConexion();
             connection.Open();
@@ -99,19 +99,20 @@ namespace TP_ClubDeportivo.DAO
 
             using var reader = command.ExecuteReader();
 
-            var lista = new List<(int, int, string, string, int, int, decimal, decimal, decimal, string)>();
+            var lista = new List<(int, int, string, string, int, int, decimal, decimal, decimal, DateTime?, string)>();
             while (reader.Read())
             {
                 lista.Add((
                     reader.GetInt32("id_liquidacion"),
                     reader.GetInt32("profesor_id"),
                     reader.GetString("profesor_nombre"),
-                    reader.GetString("especialidad"),
+                    reader.IsDBNull(reader.GetOrdinal("especialidad")) ? string.Empty : reader.GetString("especialidad"),
                     reader.GetInt32("mes"),
                     reader.GetInt32("anio"),
                     reader.GetDecimal("monto_bruto"),
                     reader.GetDecimal("descuentos"),
                     reader.GetDecimal("monto_neto"),
+                    reader.IsDBNull(reader.GetOrdinal("fecha_pago")) ? null : reader.GetDateTime("fecha_pago"),
                     reader.GetString("estado")
                 ));
             }
@@ -183,8 +184,9 @@ namespace TP_ClubDeportivo.DAO
             }
         }
 
-        public bool Pagar(int liquidacionId, DateTime fechaPago)
+        public bool Pagar(int liquidacionId, DateTime fechaPago, out string mensaje)
         {
+            mensaje = string.Empty;
             using var connection = _conexionFactory.ObtenerConexion();
             connection.Open();
 
@@ -195,9 +197,17 @@ namespace TP_ClubDeportivo.DAO
             command.Parameters.AddWithValue("@p_id_liquidacion", liquidacionId);
             command.Parameters.AddWithValue("@p_fecha_pago", fechaPago.Date);
 
+            var outputParam = new MySqlParameter("@p_mensaje", MySqlDbType.String, 255)
+            {
+                Direction = ParameterDirection.Output
+            };
+            command.Parameters.Add(outputParam);
+
             try
             {
-                return command.ExecuteNonQuery() >= 1;
+                command.ExecuteNonQuery();
+                mensaje = outputParam.Value?.ToString() ?? string.Empty;
+                return true;
             }
             catch
             {
